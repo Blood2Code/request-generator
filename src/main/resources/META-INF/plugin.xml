@@ -1,0 +1,36 @@
+<idea-plugin>
+    <id>uz.umar.http-request-generator</id>
+    <name>HTTP Request Generator</name>
+    <vendor email="u.rakhmanberdiyev@softonic.global">Umar</vendor>
+    <description>Generates .http, cURL, Postman, TypeScript Axios, JS Fetch and OpenAPI files from Spring @RestController classes</description>
+
+    <depends>com.intellij.modules.platform</depends>
+    <depends>com.intellij.modules.java</depends>
+
+    <actions>
+        <group id="uz.umar.GenerateHttpGroup"
+               class="uz.umar.GenerateHttpActionGroup"
+               text="Generate HTTP Template"
+               popup="true">
+            <add-to-group group-id="EditorPopupMenu" anchor="last"/>
+            <action id="uz.umar.GenerateHttpFile"
+                    class="uz.umar.GenerateHttpFileAction"
+                    text=".http  (JetBrains HTTP Client)"/>
+            <action id="uz.umar.GenerateCurl"
+                    class="uz.umar.GenerateCurlAction"
+                    text="cURL  (.sh)  [Pro]"/>
+            <action id="uz.umar.GeneratePostman"
+                    class="uz.umar.GeneratePostmanAction"
+                    text="Postman Collection  (.json)  [Pro]"/>
+            <action id="uz.umar.GenerateTypeScriptAxios"
+                    class="uz.umar.GenerateTypeScriptAxiosAction"
+                    text="TypeScript  Axios  (.ts)  [Pro]"/>
+            <action id="uz.umar.GenerateJsFetch"
+                    class="uz.umar.GenerateJsFetchAction"
+                    text="JavaScript  fetch  (.js)  [Pro]"/>
+            <action id="uz.umar.GenerateOpenApi"
+                    class="uz.umar.GenerateOpenApiAction"
+                    text="OpenAPI  YAML  (.yaml)  [Pro]"/>
+        </group>
+    </actions>
+</idea-plugin>
