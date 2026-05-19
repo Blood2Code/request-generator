@@ -6,6 +6,11 @@ public class LicenseChecker {
 
     static final String PLUGIN_ID = "uz.umar.http-request-generator";
 
+    // ⬇ After first upload to JetBrains Marketplace, replace with the real URL:
+    // https://plugins.jetbrains.com/plugin/{numeric-id}-request-generator
+    static final String MARKETPLACE_URL =
+            "https://plugins.jetbrains.com/search?search=HTTP+Request+Generator+Pro";
+
     public static boolean hasLicense() {
         try {
             LicensingFacade facade = LicensingFacade.getInstance();
