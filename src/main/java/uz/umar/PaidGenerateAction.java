@@ -29,7 +29,7 @@ public abstract class PaidGenerateAction extends BaseGenerateAction {
         );
 
         if (choice == Messages.OK) {
-            BrowserUtil.browse("https://plugins.jetbrains.com/plugin/" + LicenseChecker.PLUGIN_ID);
+            BrowserUtil.browse(LicenseChecker.MARKETPLACE_URL);
         }
     }
 }
