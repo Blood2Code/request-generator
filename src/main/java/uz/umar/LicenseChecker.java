@@ -6,20 +6,23 @@ public class LicenseChecker {
 
     static final String PLUGIN_ID = "uz.umar.http-request-generator";
 
+    // true = dev mode (all pro features enabled), false = prod (real license check)
+    private static final boolean DEV_MODE = true;
+
     // ⬇ After first upload to JetBrains Marketplace, replace with the real URL:
     // https://plugins.jetbrains.com/plugin/{numeric-id}-request-generator
     static final String MARKETPLACE_URL =
-            "https://plugins.jetbrains.com/search?search=HTTP+Request+Generator+Pro";
+            "https://plugins.jetbrains.com/plugin/31844-http-request-generator/versions/stable/1051528";
 
     public static boolean hasLicense() {
+        if (DEV_MODE) return true;
         try {
             LicensingFacade facade = LicensingFacade.getInstance();
-            // null means the IDE doesn't support licensing (dev/sandbox) → allow
             if (facade == null) return true;
             String stamp = facade.getConfirmationStamp(PLUGIN_ID);
             return stamp != null && !stamp.isEmpty();
         } catch (Throwable t) {
-            return true; // any unexpected error → don't block the user
+            return true;
         }
     }
 }

@@ -1,8 +1,30 @@
 <idea-plugin>
     <id>uz.umar.http-request-generator</id>
     <name>HTTP Request Generator</name>
-    <vendor email="u.rakhmanberdiyev@softonic.global">Umar</vendor>
-    <description>Generates .http, cURL, Postman, TypeScript Axios, JS Fetch and OpenAPI files from Spring @RestController classes</description>
+    <version>2026.1.0</version>
+
+    <!--
+        code        : must start with P, capitals only, max 15 chars
+        release-date: today YYYYMMDD
+        release-version: 20261 → means major version 2026.1
+        optional="true" → enables freemium (.http is free, rest is Pro)
+
+        ⚠ vendor must exactly match your organization_id on plugins.jetbrains.com
+    -->
+    <product-descriptor code="PHTTPREQUESTGEN"
+                        release-date="20260520"
+                        release-version="20261"
+                        optional="true"/>
+
+    <vendor email="umarraxmanberdiyev@gmail.com">Umar</vendor>
+
+    <description>
+        Generates .http, cURL, Postman, TypeScript Axios, JS fetch and OpenAPI files
+        from Spring @RestController classes — directly from the editor context menu.
+
+        Free: .http (JetBrains HTTP Client)
+        Pro ($0.99): cURL · Postman · TypeScript Axios · JS fetch · OpenAPI YAML
+    </description>
 
     <depends>com.intellij.modules.platform</depends>
     <depends>com.intellij.modules.java</depends>

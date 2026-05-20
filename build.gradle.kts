@@ -4,7 +4,7 @@ plugins {
 }
 
 group = "uz.umar"
-version = "1.0.0"
+version = "2026.1.0"
 
 repositories {
     mavenCentral()
