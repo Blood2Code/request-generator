@@ -1,10 +1,10 @@
 plugins {
     id("java")
-    id("org.jetbrains.intellij.platform") version "2.3.0"
+    id("org.jetbrains.intellij.platform") version "2.16.0"
 }
 
 group = "uz.umar"
-version = "2026.1.0"
+version = "2026.2.0"
 
 repositories {
     mavenCentral()
@@ -16,7 +16,7 @@ repositories {
 dependencies {
     intellijPlatform {
         // Build against Community — compiled artifact runs on BOTH Community and Ultimate
-        intellijIdeaCommunity("2024.3")
+        intellijIdea("2026.1.2")
         bundledPlugin("com.intellij.java")
     }
 }
@@ -24,7 +24,7 @@ dependencies {
 intellijPlatform {
     pluginConfiguration {
         ideaVersion {
-            sinceBuild = "223"          // IDEA 2022.3+ (ActionUpdateThread.BGT minimum)
+            sinceBuild = "243"          // IDEA 2024.3+ minimum
             untilBuild = provider { null } // no upper bound — works with all future versions
         }
     }
@@ -41,8 +41,8 @@ intellijPlatform {
 }
 
 java {
-    sourceCompatibility = JavaVersion.VERSION_17
-    targetCompatibility = JavaVersion.VERSION_17
+    sourceCompatibility = JavaVersion.VERSION_21
+    targetCompatibility = JavaVersion.VERSION_21
 }
 
 tasks.named("instrumentCode") {

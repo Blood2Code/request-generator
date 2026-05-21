@@ -1,7 +1,7 @@
 <idea-plugin>
     <id>uz.umar.http-request-generator</id>
     <name>HTTP Request Generator</name>
-    <version>2026.1.0</version>
+    <version>2026.2.0</version>
 
     <!--
         code        : must start with P, capitals only, max 15 chars
@@ -12,8 +12,8 @@
         ⚠ vendor must exactly match your organization_id on plugins.jetbrains.com
     -->
     <product-descriptor code="PHTTPREQUESTGEN"
-                        release-date="20260520"
-                        release-version="20261"
+                        release-date="20260521"
+                        release-version="20262"
                         optional="true"/>
 
     <vendor email="umarraxmanberdiyev@gmail.com">Umar</vendor>
