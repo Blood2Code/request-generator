@@ -7,14 +7,16 @@ import java.util.*;
 public class SpringControllerParser {
 
     private static final String PKG = "org.springframework.web.bind.annotation.";
+    private static final String SWAGGER = "io.swagger.v3.oas.annotations.security.";
 
-    public static List<EndpointModel> parse(PsiJavaFile javaFile) {
+    public static List<EndpointModel> parse(PsiFile file) {
         List<EndpointModel> endpoints = new ArrayList<>();
-        for (PsiClass cls : javaFile.getClasses()) {
+        for (PsiClass cls : ControllerClasses.from(file)) {
             if (cls.getAnnotation(PKG + "RestController") == null) continue;
             String basePath = extractClassPath(cls);
+            String[] classAuth = extractAuth(cls);
             for (PsiMethod method : cls.getMethods()) {
-                EndpointModel ep = parseMethod(method, basePath);
+                EndpointModel ep = parseMethod(method, basePath, classAuth);
                 if (ep != null) endpoints.add(ep);
             }
         }
@@ -26,37 +28,59 @@ public class SpringControllerParser {
         return rm != null ? extractPath(rm) : "";
     }
 
-    private static EndpointModel parseMethod(PsiMethod method, String basePath) {
+    private static EndpointModel parseMethod(PsiMethod method, String basePath, String[] classAuth) {
         String[][] mappings = {
             {"GetMapping", "GET"}, {"PostMapping", "POST"}, {"PutMapping", "PUT"},
             {"DeleteMapping", "DELETE"}, {"PatchMapping", "PATCH"}
         };
         for (String[] m : mappings) {
             PsiAnnotation ann = method.getAnnotation(PKG + m[0]);
-            if (ann != null) return buildModel(method, basePath, ann, m[1]);
+            if (ann != null) return buildModel(method, basePath, ann, m[1], classAuth);
         }
         PsiAnnotation rm = method.getAnnotation(PKG + "RequestMapping");
-        if (rm != null) return buildModel(method, basePath, rm, extractHttpMethod(rm));
+        if (rm != null) return buildModel(method, basePath, rm, extractHttpMethod(rm), classAuth);
         return null;
     }
 
-    private static EndpointModel buildModel(PsiMethod method, String basePath, PsiAnnotation ann, String httpMethod) {
+    private static EndpointModel buildModel(PsiMethod method, String basePath, PsiAnnotation ann,
+                                            String httpMethod, String[] classAuth) {
         String fullPath = normalizePath(basePath + extractPath(ann));
 
         List<String> queryParams = new ArrayList<>();
         List<String> requestHeaders = new ArrayList<>();
+        Map<String, PsiType> pathVarTypes = new LinkedHashMap<>();
+        List<MultipartPart> multipartParts = new ArrayList<>();
+        Set<String> optionalQueryParams = new LinkedHashSet<>();
         String requestBodyJson = null;
         PsiType requestBodyPsiType = null;
 
         for (PsiParameter param : method.getParameterList().getParameters()) {
-            if (param.getAnnotation(PKG + "RequestBody") != null) {
+            PsiAnnotation partAnn = param.getAnnotation(PKG + "RequestPart");
+
+            if (isMultipartFile(param.getType())) {
+                // A file upload — whether annotated with @RequestPart, @RequestParam, or neither.
+                PsiAnnotation nameAnn = partAnn != null ? partAnn : param.getAnnotation(PKG + "RequestParam");
+                String name = nameAnn != null ? extractParamName(nameAnn, param.getName()) : param.getName();
+                multipartParts.add(new MultipartPart(name, true));
+
+            } else if (partAnn != null) {
+                // A non-file multipart part (JSON/text field).
+                multipartParts.add(new MultipartPart(extractParamName(partAnn, param.getName()), false));
+
+            } else if (param.getAnnotation(PKG + "RequestBody") != null) {
                 requestBodyPsiType = param.getType();
                 requestBodyJson = JsonBodyBuilder.build(requestBodyPsiType);
+
+            } else if (param.getAnnotation(PKG + "PathVariable") != null) {
+                PsiAnnotation pvAnn = param.getAnnotation(PKG + "PathVariable");
+                String name = extractParamName(pvAnn, param.getName());
+                pathVarTypes.put(name, param.getType());
 
             } else if (param.getAnnotation(PKG + "RequestParam") != null) {
                 PsiAnnotation rpAnn = param.getAnnotation(PKG + "RequestParam");
                 String name = extractParamName(rpAnn, param.getName());
                 String def = extractDefaultValue(rpAnn);
+                if (!isRequiredParam(rpAnn, param.getType(), def)) optionalQueryParams.add(name);
                 queryParams.add(name + "=" + (!def.isEmpty() ? def : typeDefault(param.getType())));
 
             } else if (param.getAnnotation(PKG + "RequestHeader") != null) {
@@ -66,8 +90,86 @@ public class SpringControllerParser {
             }
         }
 
+        // @SecurityRequirement → auth metadata (method-level overrides class-level).
+        // Skip if the endpoint already declares an explicit Authorization @RequestHeader.
+        String[] methodAuth = extractAuth(method);
+        String[] auth = methodAuth != null ? methodAuth : classAuth;
+        boolean hasExplicitAuthHeader =
+            requestHeaders.stream().anyMatch(h -> h.toLowerCase().startsWith("authorization:"));
+        String authName = (auth != null && !hasExplicitAuthHeader) ? auth[0] : null;
+        String authType = (auth != null && !hasExplicitAuthHeader) ? auth[1] : null;
+
+        PsiType responseType = method.getReturnType();
+        if (responseType != null && "void".equals(responseType.getCanonicalText())) responseType = null;
+
         return new EndpointModel(method.getName(), httpMethod, fullPath, queryParams, requestHeaders,
-                                 requestBodyJson, requestBodyPsiType);
+                                 requestBodyJson, requestBodyPsiType, authName, authType, pathVarTypes,
+                                 multipartParts, optionalQueryParams, responseType);
+    }
+
+    /** A @RequestParam is optional if it has a defaultValue, required=false, or an Optional type. */
+    private static boolean isRequiredParam(PsiAnnotation ann, PsiType type, String defaultValue) {
+        if (!defaultValue.isEmpty()) return false;
+        PsiAnnotationMemberValue r = ann.findAttributeValue("required");
+        if (r != null && "false".equals(r.getText())) return false;
+        if (type instanceof PsiClassType ct) {
+            PsiClass c = ct.resolve();
+            if (c != null && "java.util.Optional".equals(c.getQualifiedName())) return false;
+        }
+        return true;
+    }
+
+    /** True for MultipartFile, MultipartFile[], or List/Collection<MultipartFile>. */
+    private static boolean isMultipartFile(PsiType type) {
+        if (type instanceof PsiArrayType at) return isMultipartFile(at.getComponentType());
+        if (type instanceof PsiClassType ct) {
+            PsiClass cls = ct.resolve();
+            String fqn = cls != null ? cls.getQualifiedName() : null;
+            if (fqn == null) return false;
+            if (fqn.equals("org.springframework.web.multipart.MultipartFile")) return true;
+            // List<MultipartFile> / Collection<MultipartFile>
+            if (fqn.startsWith("java.util.")) {
+                for (PsiType p : ct.getParameters()) if (isMultipartFile(p)) return true;
+            }
+        }
+        return false;
+    }
+
+    // ── Security ───────────────────────────────────────────────────────────────
+
+    /**
+     * Reads a @SecurityRequirement (or @SecurityRequirements container) on the owner.
+     * Returns [name, type] where type is "bearer" or "basic", or null if absent.
+     */
+    static String[] extractAuth(PsiModifierListOwner owner) {
+        PsiAnnotation single = owner.getAnnotation(SWAGGER + "SecurityRequirement");
+        if (single != null) return authFrom(single);
+
+        // @SecurityRequirements is the repeatable container: value = array of @SecurityRequirement
+        PsiAnnotation multi = owner.getAnnotation(SWAGGER + "SecurityRequirements");
+        if (multi != null) {
+            PsiAnnotation first = firstAnnotation(multi.findAttributeValue("value"));
+            if (first != null) return authFrom(first);
+        }
+        return null;
+    }
+
+    private static String[] authFrom(PsiAnnotation requirement) {
+        PsiAnnotationMemberValue nameVal = requirement.findAttributeValue("name");
+        String name = nameVal != null ? extractString(nameVal) : "";
+        if (name.isEmpty()) name = "bearerAuth";
+        String type = name.toLowerCase().contains("basic") ? "basic" : "bearer";
+        return new String[]{name, type};
+    }
+
+    private static PsiAnnotation firstAnnotation(PsiAnnotationMemberValue value) {
+        if (value instanceof PsiAnnotation a) return a;
+        if (value instanceof PsiArrayInitializerMemberValue arr) {
+            for (PsiAnnotationMemberValue item : arr.getInitializers()) {
+                if (item instanceof PsiAnnotation a) return a;
+            }
+        }
+        return null;
     }
 
     // ── Annotation helpers ────────────────────────────────────────────────────
@@ -89,11 +191,27 @@ public class SpringControllerParser {
     }
 
     static String extractDefaultValue(PsiAnnotation annotation) {
-        PsiAnnotationMemberValue v = annotation.findAttributeValue("defaultValue");
+        // findDeclaredAttributeValue → only the explicitly-written value; null when the user
+        // never set defaultValue (findAttributeValue would leak Spring's DEFAULT_NONE sentinel).
+        PsiAnnotationMemberValue v = annotation.findDeclaredAttributeValue("defaultValue");
         if (v == null) return "";
         String text = extractString(v);
-        if (text.isBlank() || text.contains("DEFAULT_NONE") || text.startsWith("\\n")) return "";
+        if (isDefaultNone(text)) return "";
         return text;
+    }
+
+    /**
+     * True for Spring's ValueConstants.DEFAULT_NONE sentinel. Its value is
+     * "\n\t\t\n\t\t\n\uE000\uE001\uE002\n\t\t\t\t\n" — non-blank because of the
+     * private-use-area markers, so a plain isBlank() check alone would miss it.
+     */
+    private static boolean isDefaultNone(String text) {
+        if (text.isBlank() || text.contains("DEFAULT_NONE") || text.startsWith("\\n")) return true;
+        for (int i = 0; i < text.length(); i++) {
+            char c = text.charAt(i);
+            if (c >= '\uE000' && c <= '\uF8FF') return true; // Unicode private-use area
+        }
+        return false;
     }
 
     static String extractString(PsiAnnotationMemberValue value) {

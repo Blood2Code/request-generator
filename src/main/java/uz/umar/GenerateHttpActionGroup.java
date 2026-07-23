@@ -1,8 +1,8 @@
 package uz.umar;
 
 import com.intellij.openapi.actionSystem.*;
+import com.intellij.psi.PsiClass;
 import com.intellij.psi.PsiFile;
-import com.intellij.psi.PsiJavaFile;
 import org.jetbrains.annotations.NotNull;
 
 public class GenerateHttpActionGroup extends DefaultActionGroup {
@@ -19,8 +19,8 @@ public class GenerateHttpActionGroup extends DefaultActionGroup {
     }
 
     private boolean isRestControllerFile(PsiFile psiFile) {
-        if (!(psiFile instanceof PsiJavaFile javaFile)) return false;
-        for (var cls : javaFile.getClasses()) {
+        if (psiFile == null) return false;
+        for (PsiClass cls : ControllerClasses.from(psiFile)) {
             if (cls.getAnnotation("org.springframework.web.bind.annotation.RestController") != null) {
                 return true;
             }

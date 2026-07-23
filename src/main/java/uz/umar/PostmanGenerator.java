@@ -1,16 +1,15 @@
 package uz.umar;
 
-import com.intellij.psi.PsiJavaFile;
+import com.intellij.psi.PsiFile;
 import java.util.*;
 import java.util.regex.*;
 
 public class PostmanGenerator {
 
-    private static final String BASE_URL = "http://localhost:8080";
-
-    public static String generate(PsiJavaFile javaFile) {
-        List<EndpointModel> endpoints = SpringControllerParser.parse(javaFile);
-        String controllerName = javaFile.getVirtualFile().getNameWithoutExtension();
+    public static String generate(PsiFile file) {
+        List<EndpointModel> endpoints = SpringControllerParser.parse(file);
+        String controllerName = file.getVirtualFile().getNameWithoutExtension();
+        String baseUrl = BaseUrlResolver.resolve(file.getProject());
 
         StringBuilder sb = new StringBuilder();
         sb.append("{\n");
@@ -28,8 +27,12 @@ public class PostmanGenerator {
 
         sb.append("  ],\n");
         sb.append("  \"variable\": [\n");
-        sb.append("    {\"key\": \"baseUrl\", \"value\": \"").append(BASE_URL).append("\"}\n");
-        sb.append("  ]\n");
+        sb.append("    {\"key\": \"baseUrl\", \"value\": \"").append(baseUrl).append("\"}");
+        if (endpoints.stream().anyMatch(ep -> "bearer".equals(ep.authType)))
+            sb.append(",\n    {\"key\": \"token\", \"value\": \"your_token_here\"}");
+        if (endpoints.stream().anyMatch(ep -> "basic".equals(ep.authType)))
+            sb.append(",\n    {\"key\": \"credentials\", \"value\": \"base64_encoded_user_password\"}");
+        sb.append("\n  ]\n");
         sb.append("}");
 
         return sb.toString();
@@ -43,8 +46,11 @@ public class PostmanGenerator {
         sb.append("        \"method\": \"").append(ep.httpMethod).append("\",\n");
 
         // Headers
-        List<String> headers = new ArrayList<>(ep.requestHeaders);
-        if (ep.requestBodyJson != null) headers.add("Content-Type: application/json");
+        List<String> headers = new ArrayList<>();
+        if ("bearer".equals(ep.authType)) headers.add("Authorization: Bearer {{token}}");
+        else if ("basic".equals(ep.authType)) headers.add("Authorization: Basic {{credentials}}");
+        headers.addAll(ep.requestHeaders);
+        if (!ep.isMultipart() && ep.requestBodyJson != null) headers.add("Content-Type: application/json");
         headers.add("Accept: application/json");
 
         sb.append("        \"header\": [\n");
@@ -58,7 +64,25 @@ public class PostmanGenerator {
         sb.append("        ]");
 
         // Body
-        if (ep.requestBodyJson != null) {
+        if (ep.isMultipart()) {
+            sb.append(",\n");
+            sb.append("        \"body\": {\n");
+            sb.append("          \"mode\": \"formdata\",\n");
+            sb.append("          \"formdata\": [\n");
+            for (int i = 0; i < ep.multipartParts.size(); i++) {
+                MultipartPart part = ep.multipartParts.get(i);
+                if (part.isFile) {
+                    sb.append("            {\"key\": \"").append(esc(part.name)).append("\", \"type\": \"file\", \"src\": \"\"}");
+                } else {
+                    sb.append("            {\"key\": \"").append(esc(part.name))
+                      .append("\", \"type\": \"text\", \"value\": \"").append(esc(part.name)).append("_value\"}");
+                }
+                if (i < ep.multipartParts.size() - 1) sb.append(",");
+                sb.append("\n");
+            }
+            sb.append("          ]\n");
+            sb.append("        }");
+        } else if (ep.requestBodyJson != null) {
             sb.append(",\n");
             sb.append("        \"body\": {\n");
             sb.append("          \"mode\": \"raw\",\n");

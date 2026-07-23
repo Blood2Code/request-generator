@@ -1,21 +1,25 @@
 package uz.umar;
 
-import com.intellij.psi.PsiJavaFile;
+import com.intellij.psi.PsiFile;
 import java.util.*;
 import java.util.regex.*;
 
 public class CurlGenerator {
 
-    private static final String BASE_URL = "http://localhost:8080";
-
-    public static String generate(PsiJavaFile javaFile) {
-        List<EndpointModel> endpoints = SpringControllerParser.parse(javaFile);
-        String controllerName = javaFile.getVirtualFile().getNameWithoutExtension();
+    public static String generate(PsiFile file) {
+        List<EndpointModel> endpoints = SpringControllerParser.parse(file);
+        String controllerName = file.getVirtualFile().getNameWithoutExtension();
+        String baseUrl = BaseUrlResolver.resolve(file.getProject());
 
         StringBuilder sb = new StringBuilder();
         sb.append("#!/usr/bin/env bash\n");
         sb.append("# Generated from ").append(controllerName).append("\n");
-        sb.append("BASE_URL=\"").append(BASE_URL).append("\"\n\n");
+        sb.append("BASE_URL=\"").append(baseUrl).append("\"\n");
+        if (endpoints.stream().anyMatch(ep -> "bearer".equals(ep.authType)))
+            sb.append("TOKEN=\"your_token_here\"\n");
+        if (endpoints.stream().anyMatch(ep -> "basic".equals(ep.authType)))
+            sb.append("CREDENTIALS=\"base64_encoded_user_password\"\n");
+        sb.append("\n");
 
         for (EndpointModel ep : endpoints) {
             sb.append(buildBlock(ep)).append("\n\n");
@@ -33,26 +37,48 @@ public class CurlGenerator {
             sb.append(var.toUpperCase().replace("-", "_")).append("=1\n");
         }
 
-        String url = BASE_URL + toShellPath(ep.path);
+        String url = "${BASE_URL}" + toShellPath(ep.path);
         if (!ep.queryParams.isEmpty()) url += "?" + String.join("&", ep.queryParams);
 
         sb.append("curl -s -X ").append(ep.httpMethod).append(" \"").append(url).append("\"");
 
+        if ("bearer".equals(ep.authType)) {
+            sb.append(" \\\n  -H \"Authorization: Bearer ${TOKEN}\"");
+        } else if ("basic".equals(ep.authType)) {
+            sb.append(" \\\n  -H \"Authorization: Basic ${CREDENTIALS}\"");
+        }
+
         for (String h : ep.requestHeaders) {
             sb.append(" \\\n  -H \"").append(h).append("\"");
         }
-        if (ep.requestBodyJson != null) {
+        // curl sets multipart Content-Type (with boundary) automatically for -F
+        if (!ep.isMultipart() && ep.requestBodyJson != null) {
             sb.append(" \\\n  -H \"Content-Type: application/json\"");
         }
         sb.append(" \\\n  -H \"Accept: application/json\"");
 
-        if (ep.requestBodyJson != null) {
+        if (ep.isMultipart()) {
+            for (MultipartPart part : ep.multipartParts) {
+                if (part.isFile) {
+                    sb.append(" \\\n  -F \"").append(part.name).append("=@./").append(part.name).append("\"");
+                } else {
+                    sb.append(" \\\n  -F \"").append(part.name).append("=").append(part.name).append("_value\"");
+                }
+            }
+        } else if (ep.requestBodyJson != null) {
             // Single-quote the JSON body; escape any single-quotes inside
             String body = ep.requestBodyJson.replace("'", "'\"'\"'");
             sb.append(" \\\n  -d '").append(body).append("'");
         }
 
         sb.append("\necho \"\"");
+
+        String resp = JsonBodyBuilder.responseExample(ep.responsePsiType);
+        if (resp != null) {
+            sb.append("\n# Example 200 response:\n");
+            sb.append(resp.lines().map(l -> "# " + l).collect(java.util.stream.Collectors.joining("\n")));
+        }
+
         return sb.toString();
     }
 

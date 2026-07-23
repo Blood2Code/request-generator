@@ -19,15 +19,29 @@
     <vendor email="umarraxmanberdiyev@gmail.com">Umar</vendor>
 
     <description>
-        Generates .http, cURL, Postman, TypeScript Axios, JS fetch and OpenAPI files
-        from Spring @RestController classes — directly from the editor context menu.
+        Generates .http, .env, cURL, Postman, TypeScript Axios, JS fetch, OpenAPI,
+        Java Spring RestClient and Python requests files from Spring @RestController
+        classes (Java and Kotlin) — directly from the editor context menu.
 
-        Free: .http (JetBrains HTTP Client)
-        Pro ($0.99): cURL · Postman · TypeScript Axios · JS fetch · OpenAPI YAML
+        Understands @PathVariable / @RequestParam / @RequestHeader / @RequestBody,
+        @RequestPart multipart uploads, @SecurityRequirement (bearer/basic auth),
+        optional params, and unwraps ResponseEntity/Optional/Flux/Page/List response types.
+        Base URL is read from application.yml / application.properties.
+
+        Free: .http (JetBrains HTTP Client) · .env · "Generate for all controllers"
+        Pro ($0.99): cURL · Postman · TypeScript Axios · JS fetch · OpenAPI YAML ·
+        Java RestClient · Python requests
     </description>
 
     <depends>com.intellij.modules.platform</depends>
     <depends>com.intellij.modules.java</depends>
+    <depends>org.jetbrains.kotlin</depends>
+
+    <!-- We only read Kotlin PSI via UAST light classes (no Kotlin analysis API),
+         so the plugin is compatible with both K1 and K2 modes. -->
+    <extensions defaultExtensionNs="org.jetbrains.kotlin">
+        <supportsKotlinPluginMode supportsK1="true" supportsK2="true"/>
+    </extensions>
 
     <actions>
         <group id="uz.umar.GenerateHttpGroup"
@@ -38,6 +52,9 @@
             <action id="uz.umar.GenerateHttpFile"
                     class="uz.umar.GenerateHttpFileAction"
                     text=".http  (JetBrains HTTP Client)"/>
+            <action id="uz.umar.GenerateEnv"
+                    class="uz.umar.GenerateEnvAction"
+                    text=".env  (base URL + token)"/>
             <action id="uz.umar.GenerateCurl"
                     class="uz.umar.GenerateCurlAction"
                     text="cURL  (.sh)  [Pro]"/>
@@ -53,6 +70,18 @@
             <action id="uz.umar.GenerateOpenApi"
                     class="uz.umar.GenerateOpenApiAction"
                     text="OpenAPI  YAML  (.yaml)  [Pro]"/>
+            <action id="uz.umar.GenerateRestClient"
+                    class="uz.umar.GenerateRestClientAction"
+                    text="Java  Spring RestClient  (.java)  [Pro]"/>
+            <action id="uz.umar.GeneratePython"
+                    class="uz.umar.GeneratePythonAction"
+                    text="Python  requests  (.py)  [Pro]"/>
         </group>
+
+        <action id="uz.umar.GenerateAllHttp"
+                class="uz.umar.GenerateAllHttpAction"
+                text="Generate .http for All Controllers">
+            <add-to-group group-id="ProjectViewPopupMenu" anchor="last"/>
+        </action>
     </actions>
 </idea-plugin>

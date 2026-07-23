@@ -2,15 +2,15 @@ package uz.umar;
 
 import com.intellij.psi.PsiFile;
 
-public class GenerateTypeScriptAxiosAction extends PaidGenerateAction {
+public class GeneratePythonAction extends PaidGenerateAction {
 
     @Override
     protected String generate(PsiFile file) {
-        return TypeScriptAxiosGenerator.generate(file);
+        return PythonRequestsGenerator.generate(file);
     }
 
     @Override
     protected String fileSuffix() {
-        return ".ts";
+        return ".py";
     }
 }

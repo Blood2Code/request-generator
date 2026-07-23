@@ -1,12 +1,12 @@
 package uz.umar;
 
-import com.intellij.psi.PsiJavaFile;
+import com.intellij.psi.PsiFile;
 
 public class GenerateOpenApiAction extends PaidGenerateAction {
 
     @Override
-    protected String generate(PsiJavaFile javaFile) {
-        return OpenApiGenerator.generate(javaFile);
+    protected String generate(PsiFile file) {
+        return OpenApiGenerator.generate(file);
     }
 
     @Override

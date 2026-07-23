@@ -6,6 +6,7 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 public class JsonBodyBuilder {
 
@@ -13,6 +14,22 @@ public class JsonBodyBuilder {
 
     public static String build(PsiType type) {
         return buildValue(type, 0, new HashSet<>());
+    }
+
+    /**
+     * JSON example for a controller return type, unwrapping ResponseEntity/Optional/etc.
+     * Array-like responses (List/Flux/Page/T[]) are wrapped in a single-element array.
+     * Returns null when there is no response body.
+     */
+    public static String responseExample(PsiType raw) {
+        if (raw == null) return null;
+        if (ResponseTypeResolver.isArray(raw)) {
+            PsiType el = ResponseTypeResolver.element(raw);
+            String inner = el != null ? build(el) : "{}";
+            String indented = inner.lines().map(l -> "  " + l).collect(Collectors.joining("\n"));
+            return "[\n" + indented + "\n]";
+        }
+        return build(ResponseTypeResolver.unwrap(raw));
     }
 
     private static String buildValue(PsiType type, int depth, Set<String> visited) {

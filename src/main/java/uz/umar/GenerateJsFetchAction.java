@@ -1,12 +1,12 @@
 package uz.umar;
 
-import com.intellij.psi.PsiJavaFile;
+import com.intellij.psi.PsiFile;
 
 public class GenerateJsFetchAction extends PaidGenerateAction {
 
     @Override
-    protected String generate(PsiJavaFile javaFile) {
-        return JavaScriptFetchGenerator.generate(javaFile);
+    protected String generate(PsiFile file) {
+        return JavaScriptFetchGenerator.generate(file);
     }
 
     @Override

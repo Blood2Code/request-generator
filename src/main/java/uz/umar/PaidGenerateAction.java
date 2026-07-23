@@ -18,8 +18,8 @@ public abstract class PaidGenerateAction extends BaseGenerateAction {
             e.getProject(),
             "<html>" +
             "<b>HTTP Request Generator Pro</b> — $0.99<br><br>" +
-            "<b>Free:</b>  .http &nbsp;(JetBrains HTTP Client)<br>" +
-            "<b>Pro:</b> &nbsp; cURL &nbsp;·&nbsp; Postman &nbsp;·&nbsp; TypeScript Axios &nbsp;·&nbsp; JS fetch &nbsp;·&nbsp; OpenAPI YAML<br><br>" +
+            "<b>Free:</b>  .http &nbsp;(JetBrains HTTP Client) &nbsp;·&nbsp; .env<br>" +
+            "<b>Pro:</b> &nbsp; cURL &nbsp;·&nbsp; Postman &nbsp;·&nbsp; TypeScript Axios &nbsp;·&nbsp; JS fetch &nbsp;·&nbsp; OpenAPI YAML &nbsp;·&nbsp; Java RestClient &nbsp;·&nbsp; Python requests<br><br>" +
             "Get the license on JetBrains Marketplace." +
             "</html>",
             "Pro Feature",

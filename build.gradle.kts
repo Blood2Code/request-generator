@@ -18,6 +18,7 @@ dependencies {
         // Build against Community — compiled artifact runs on BOTH Community and Ultimate
         intellijIdea("2026.1.2")
         bundledPlugin("com.intellij.java")
+        bundledPlugin("org.jetbrains.kotlin") // Kotlin UAST provider — parse .kt @RestControllers
     }
 }
 

@@ -7,14 +7,21 @@ import java.util.regex.*;
 
 public class OpenApiGenerator {
 
-    public static String generate(PsiJavaFile javaFile) {
-        List<EndpointModel> endpoints = SpringControllerParser.parse(javaFile);
-        String controllerName = javaFile.getVirtualFile().getNameWithoutExtension();
+    public static String generate(PsiFile file) {
+        List<EndpointModel> endpoints = SpringControllerParser.parse(file);
+        String controllerName = file.getVirtualFile().getNameWithoutExtension();
+        String baseUrl = BaseUrlResolver.resolve(file.getProject());
 
-        // Collect schemas for all request body types
+        // Collect schemas for all request body and response types
         Map<String, PsiClass> schemas = new LinkedHashMap<>();
         for (EndpointModel ep : endpoints) {
             if (ep.requestBodyPsiType != null) collectSchemas(ep.requestBodyPsiType, schemas);
+            if (ep.responsePsiType != null) {
+                PsiType payload = ResponseTypeResolver.isArray(ep.responsePsiType)
+                        ? ResponseTypeResolver.element(ep.responsePsiType)
+                        : ResponseTypeResolver.unwrap(ep.responsePsiType);
+                if (payload != null) collectSchemas(payload, schemas);
+            }
         }
 
         // Group endpoints by path to merge methods under one path entry
@@ -29,7 +36,7 @@ public class OpenApiGenerator {
         sb.append("  title: ").append(controllerName).append(" API\n");
         sb.append("  version: 1.0.0\n");
         sb.append("servers:\n");
-        sb.append("  - url: http://localhost:8080\n\n");
+        sb.append("  - url: ").append(baseUrl).append("\n\n");
         sb.append("paths:\n");
 
         for (Map.Entry<String, List<EndpointModel>> entry : byPath.entrySet()) {
@@ -39,11 +46,29 @@ public class OpenApiGenerator {
             }
         }
 
-        if (!schemas.isEmpty()) {
-            sb.append("\ncomponents:\n  schemas:\n");
-            Set<String> visited = new LinkedHashSet<>();
-            for (PsiClass cls : schemas.values()) {
-                sb.append(buildSchema(cls, visited, "    "));
+        // Collect unique security schemes referenced by @SecurityRequirement
+        Map<String, String> authSchemes = new LinkedHashMap<>();
+        for (EndpointModel ep : endpoints) {
+            if (ep.requiresAuth()) authSchemes.put(ep.authName, ep.authType);
+        }
+
+        if (!schemas.isEmpty() || !authSchemes.isEmpty()) {
+            sb.append("\ncomponents:\n");
+            if (!schemas.isEmpty()) {
+                sb.append("  schemas:\n");
+                Set<String> visited = new LinkedHashSet<>();
+                for (PsiClass cls : schemas.values()) {
+                    sb.append(buildSchema(cls, visited, "    "));
+                }
+            }
+            if (!authSchemes.isEmpty()) {
+                sb.append("  securitySchemes:\n");
+                for (Map.Entry<String, String> e : authSchemes.entrySet()) {
+                    sb.append("    ").append(e.getKey()).append(":\n");
+                    sb.append("      type: http\n");
+                    sb.append("      scheme: ").append(e.getValue()).append("\n");
+                    if ("bearer".equals(e.getValue())) sb.append("      bearerFormat: JWT\n");
+                }
             }
         }
 
@@ -69,14 +94,14 @@ public class OpenApiGenerator {
                 sb.append("          in: path\n");
                 sb.append("          required: true\n");
                 sb.append("          schema:\n");
-                sb.append("            ").append(inferPathVarSchema(var)).append("\n");
+                sb.append("            ").append(pathVarSchema(ep.pathVarTypes.get(var), var)).append("\n");
             }
             for (String qp : ep.queryParams) {
                 String[] kv = qp.split("=", 2);
                 String val = kv.length > 1 ? kv[1] : "";
                 sb.append("        - name: ").append(kv[0]).append("\n");
                 sb.append("          in: query\n");
-                sb.append("          required: false\n");
+                sb.append("          required: ").append(!ep.isOptional(kv[0])).append("\n");
                 sb.append("          schema:\n");
                 sb.append("            ").append(schemaFromValue(val)).append("\n");
                 if (!val.isEmpty()) sb.append("            example: ").append(yamlValue(val)).append("\n");
@@ -88,6 +113,26 @@ public class OpenApiGenerator {
                 sb.append("          required: false\n");
                 sb.append("          schema:\n");
                 sb.append("            type: string\n");
+            }
+        }
+
+        // Multipart body
+        if (ep.isMultipart()) {
+            sb.append("      requestBody:\n");
+            sb.append("        required: true\n");
+            sb.append("        content:\n");
+            sb.append("          multipart/form-data:\n");
+            sb.append("            schema:\n");
+            sb.append("              type: object\n");
+            sb.append("              properties:\n");
+            for (MultipartPart part : ep.multipartParts) {
+                sb.append("                ").append(part.name).append(":\n");
+                if (part.isFile) {
+                    sb.append("                  type: string\n");
+                    sb.append("                  format: binary\n");
+                } else {
+                    sb.append("                  type: string\n");
+                }
             }
         }
 
@@ -103,11 +148,32 @@ public class OpenApiGenerator {
             sb.append("              ").append(schemaRef).append("\n");
         }
 
+        if (ep.requiresAuth()) {
+            sb.append("      security:\n");
+            sb.append("        - ").append(ep.authName).append(": []\n");
+        }
+
         sb.append("      responses:\n");
         sb.append("        '200':\n");
         sb.append("          description: OK\n");
+        if (ep.responsePsiType != null) {
+            sb.append("          content:\n");
+            sb.append("            application/json:\n");
+            sb.append("              schema:\n");
+            sb.append(responseSchema(ep.responsePsiType, "                "));
+        }
 
         return sb.toString();
+    }
+
+    /** OpenAPI schema for a response type, unwrapping ResponseEntity/Optional/Flux/Page etc. */
+    private static String responseSchema(PsiType type, String indent) {
+        if (ResponseTypeResolver.isArray(type)) {
+            PsiType el = ResponseTypeResolver.element(type);
+            return indent + "type: array\n" + indent + "items:\n"
+                 + (el != null ? buildPropertySchema(el, indent + "  ") : indent + "  type: object\n");
+        }
+        return buildPropertySchema(ResponseTypeResolver.unwrap(type), indent);
     }
 
     // ── Schema ────────────────────────────────────────────────────────────────
@@ -239,6 +305,41 @@ public class OpenApiGenerator {
         if (lower.endsWith("id") || lower.endsWith("num") || lower.equals("page") || lower.equals("size"))
             return "type: integer\n            format: int64";
         return "type: string";
+    }
+
+    /** Inline schema for a path var from its declared type; falls back to name-based guess. */
+    private static String pathVarSchema(PsiType type, String varName) {
+        if (type != null) {
+            String s = simpleSchema(type);
+            if (s != null) return s;
+        }
+        return inferPathVarSchema(varName);
+    }
+
+    /** Inline OpenAPI schema for a scalar type, or null if not a simple scalar/enum. */
+    private static String simpleSchema(PsiType type) {
+        if (type instanceof PsiPrimitiveType) {
+            return switch (type.getCanonicalText()) {
+                case "boolean"         -> "type: boolean";
+                case "long"            -> "type: integer\n            format: int64";
+                case "float", "double" -> "type: number";
+                default                -> "type: integer";
+            };
+        }
+        if (type instanceof PsiClassType ct) {
+            PsiClass cls = ct.resolve();
+            String fqn = cls != null ? cls.getQualifiedName() : type.getCanonicalText();
+            if (fqn == null) return null;
+            if (fqn.equals("java.lang.Long"))                                        return "type: integer\n            format: int64";
+            if (fqn.contains("Integer") || fqn.contains("Short") || fqn.contains("Byte")
+                || fqn.equals("java.math.BigInteger"))                               return "type: integer";
+            if (fqn.contains("Double") || fqn.contains("Float") || fqn.contains("BigDecimal")) return "type: number";
+            if (fqn.equals("java.lang.Boolean"))                                     return "type: boolean";
+            if (fqn.equals("java.lang.String") || fqn.equals("java.lang.Character")) return "type: string";
+            if (fqn.equals("java.util.UUID"))                                        return "type: string\n            format: uuid";
+            if (cls != null && cls.isEnum())                                         return "type: string";
+        }
+        return null;
     }
 
     private static String schemaFromValue(String val) {

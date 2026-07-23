@@ -7,22 +7,34 @@ import java.util.stream.Collectors;
 
 public class TypeScriptAxiosGenerator {
 
-    public static String generate(PsiJavaFile javaFile) {
-        List<EndpointModel> endpoints = SpringControllerParser.parse(javaFile);
-        String controllerName = javaFile.getVirtualFile().getNameWithoutExtension();
+    public static String generate(PsiFile file) {
+        List<EndpointModel> endpoints = SpringControllerParser.parse(file);
+        String controllerName = file.getVirtualFile().getNameWithoutExtension();
+        String baseUrl = BaseUrlResolver.resolve(file.getProject());
 
-        // Collect all request body classes that need interfaces
+        // Collect all request body + response classes that need interfaces
         Map<String, PsiClass> interfaceMap = new LinkedHashMap<>();
         for (EndpointModel ep : endpoints) {
             if (ep.requestBodyPsiType != null) {
                 collectCustomClasses(ep.requestBodyPsiType, interfaceMap);
+            }
+            if (ep.responsePsiType != null) {
+                PsiType payload = ResponseTypeResolver.isArray(ep.responsePsiType)
+                        ? ResponseTypeResolver.element(ep.responsePsiType)
+                        : ResponseTypeResolver.unwrap(ep.responsePsiType);
+                if (payload != null) collectCustomClasses(payload, interfaceMap);
             }
         }
 
         StringBuilder sb = new StringBuilder();
         sb.append("// Generated from ").append(controllerName).append("\n");
         sb.append("import axios from 'axios';\n\n");
-        sb.append("const BASE_URL = 'http://localhost:8080';\n\n");
+        sb.append("const BASE_URL = '").append(baseUrl).append("';\n");
+        if (endpoints.stream().anyMatch(ep -> "bearer".equals(ep.authType)))
+            sb.append("const TOKEN = 'your_token_here';\n");
+        if (endpoints.stream().anyMatch(ep -> "basic".equals(ep.authType)))
+            sb.append("const CREDENTIALS = 'base64_encoded_user_password';\n");
+        sb.append("\n");
 
         // Interfaces
         if (!interfaceMap.isEmpty()) {
@@ -87,11 +99,15 @@ public class TypeScriptAxiosGenerator {
     // ── Function generation ───────────────────────────────────────────────────
 
     private static String buildFunction(EndpointModel ep) {
+        // `?`-optional params must trail all required ones in a TS signature, so bucket them.
         List<String> params = new ArrayList<>();
+        List<String> optionalParams = new ArrayList<>();
         List<String> pathVars = extractPathVars(ep.path);
 
         for (String var : pathVars) {
-            params.add(var + ": " + inferPathVarTsType(var));
+            PsiType declared = ep.pathVarTypes.get(var);
+            String tsType = declared != null ? toTsType(declared) : inferPathVarTsType(var);
+            params.add(var + ": " + tsType);
         }
         for (String qp : ep.queryParams) {
             String[] kv = qp.split("=", 2);
@@ -99,7 +115,25 @@ public class TypeScriptAxiosGenerator {
             String val  = kv.length > 1 ? kv[1] : "";
             String tsType = inferTsTypeFromValue(val);
             String defVal = tsDefault(val, tsType);
-            params.add(name + ": " + tsType + (defVal.isEmpty() ? "" : " = " + defVal));
+            if (!defVal.isEmpty()) {
+                params.add(name + ": " + tsType + " = " + defVal);
+            } else if (ep.isOptional(name)) {
+                optionalParams.add(name + "?: " + tsType);
+            } else {
+                params.add(name + ": " + tsType);
+            }
+        }
+
+        String tsPath = springPathToTs(ep.path);
+        String url    = "`${BASE_URL}" + tsPath + "`";
+        String method = ep.httpMethod.toLowerCase();
+
+        if (ep.isMultipart()) {
+            for (MultipartPart part : ep.multipartParts) {
+                params.add(part.name + ": " + (part.isFile ? "File" : "string"));
+            }
+            params.addAll(optionalParams);
+            return buildMultipartFunction(ep, params, url, method);
         }
 
         String bodyType = null;
@@ -107,28 +141,75 @@ public class TypeScriptAxiosGenerator {
             bodyType = toTsType(ep.requestBodyPsiType);
             params.add("data: " + bodyType);
         }
+        params.addAll(optionalParams);
 
-        String tsPath  = springPathToTs(ep.path);
-        String url     = "`${BASE_URL}" + tsPath + "`";
-        String method  = ep.httpMethod.toLowerCase();
-        String call    = buildAxiosCall(method, url, ep.queryParams, bodyType);
+        String call = buildAxiosCall(method, url, ep.queryParams, bodyType, ep.authType, tsResponseType(ep));
 
         return "  " + ep.methodName + ": (" + String.join(", ", params) + ") =>\n    " + call + ",\n\n";
     }
 
-    private static String buildAxiosCall(String method, String url, List<String> queryParams, String bodyType) {
-        String paramsArg = queryParams.isEmpty() ? "" :
-            "{ params: { " + queryParams.stream().map(qp -> qp.split("=")[0]).collect(Collectors.joining(", ")) + " } }";
+    /** Generic type arg for the axios call, e.g. "<User>" or "<User[]>"; "" when unknown. */
+    private static String tsResponseType(EndpointModel ep) {
+        if (ep.responsePsiType == null) return "";
+        String ts;
+        if (ResponseTypeResolver.isArray(ep.responsePsiType)) {
+            PsiType el = ResponseTypeResolver.element(ep.responsePsiType);
+            ts = (el != null ? toTsType(el) : "unknown") + "[]";
+        } else {
+            ts = toTsType(ResponseTypeResolver.unwrap(ep.responsePsiType));
+        }
+        if (ts.isEmpty() || ts.equals("unknown") || ts.equals("void") || ts.equals("Void")) return "";
+        return "<" + ts + ">";
+    }
+
+    private static String buildMultipartFunction(EndpointModel ep, List<String> params, String url, String method) {
+        List<String> headerParts = new ArrayList<>();
+        if ("bearer".equals(ep.authType)) headerParts.add("Authorization: `Bearer ${TOKEN}`");
+        else if ("basic".equals(ep.authType)) headerParts.add("Authorization: `Basic ${CREDENTIALS}`");
+        headerParts.add("'Content-Type': 'multipart/form-data'");
+
+        List<String> configParts = new ArrayList<>();
+        configParts.add("headers: { " + String.join(", ", headerParts) + " }");
+        if (!ep.queryParams.isEmpty()) {
+            configParts.add("params: { " + ep.queryParams.stream().map(qp -> qp.split("=")[0])
+                    .collect(Collectors.joining(", ")) + " }");
+        }
+        String config = "{ " + String.join(", ", configParts) + " }";
+
+        StringBuilder sb = new StringBuilder();
+        sb.append("  ").append(ep.methodName).append(": (").append(String.join(", ", params)).append(") => {\n");
+        sb.append("    const form = new FormData();\n");
+        for (MultipartPart part : ep.multipartParts) {
+            sb.append("    form.append('").append(part.name).append("', ").append(part.name).append(");\n");
+        }
+        sb.append("    return axios.").append(method).append(tsResponseType(ep)).append("(")
+          .append(url).append(", form, ").append(config).append(");\n");
+        sb.append("  },\n\n");
+        return sb.toString();
+    }
+
+    private static String buildAxiosCall(String method, String url, List<String> queryParams,
+                                         String bodyType, String authType, String responseType) {
+        // Build a request config object combining headers (auth) and query params.
+        List<String> configParts = new ArrayList<>();
+        if ("bearer".equals(authType)) configParts.add("headers: { Authorization: `Bearer ${TOKEN}` }");
+        else if ("basic".equals(authType)) configParts.add("headers: { Authorization: `Basic ${CREDENTIALS}` }");
+        if (!queryParams.isEmpty()) {
+            configParts.add("params: { " + queryParams.stream().map(qp -> qp.split("=")[0])
+                    .collect(Collectors.joining(", ")) + " }");
+        }
+        String config = configParts.isEmpty() ? "" : "{ " + String.join(", ", configParts) + " }";
+        String fn = "axios." + method + responseType;
 
         return switch (method) {
-            case "get", "delete", "head" -> queryParams.isEmpty()
-                    ? "axios." + method + "(" + url + ")"
-                    : "axios." + method + "(" + url + ", " + paramsArg + ")";
+            case "get", "delete", "head" -> config.isEmpty()
+                    ? fn + "(" + url + ")"
+                    : fn + "(" + url + ", " + config + ")";
             default -> { // post, put, patch
                 String body = bodyType != null ? "data" : "{}";
-                yield queryParams.isEmpty()
-                    ? "axios." + method + "(" + url + ", " + body + ")"
-                    : "axios." + method + "(" + url + ", " + body + ", " + paramsArg + ")";
+                yield config.isEmpty()
+                    ? fn + "(" + url + ", " + body + ")"
+                    : fn + "(" + url + ", " + body + ", " + config + ")";
             }
         };
     }

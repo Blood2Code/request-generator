@@ -1,19 +1,25 @@
 package uz.umar;
 
-import com.intellij.psi.PsiJavaFile;
+import com.intellij.psi.PsiFile;
 import java.util.*;
 import java.util.regex.*;
 import java.util.stream.Collectors;
 
 public class JavaScriptFetchGenerator {
 
-    public static String generate(PsiJavaFile javaFile) {
-        List<EndpointModel> endpoints = SpringControllerParser.parse(javaFile);
-        String controllerName = javaFile.getVirtualFile().getNameWithoutExtension();
+    public static String generate(PsiFile file) {
+        List<EndpointModel> endpoints = SpringControllerParser.parse(file);
+        String controllerName = file.getVirtualFile().getNameWithoutExtension();
+        String baseUrl = BaseUrlResolver.resolve(file.getProject());
 
         StringBuilder sb = new StringBuilder();
         sb.append("// Generated from ").append(controllerName).append("\n");
-        sb.append("const BASE_URL = 'http://localhost:8080';\n\n");
+        sb.append("const BASE_URL = '").append(baseUrl).append("';\n");
+        if (endpoints.stream().anyMatch(ep -> "bearer".equals(ep.authType)))
+            sb.append("const TOKEN = 'your_token_here';\n");
+        if (endpoints.stream().anyMatch(ep -> "basic".equals(ep.authType)))
+            sb.append("const CREDENTIALS = 'base64_encoded_user_password';\n");
+        sb.append("\n");
         sb.append("export const ").append(controllerName).append("Api = {\n\n");
 
         for (EndpointModel ep : endpoints) {
@@ -33,31 +39,49 @@ public class JavaScriptFetchGenerator {
             String def = kv.length > 1 && !kv[1].isEmpty() ? " = " + defaultLiteral(kv[1]) : "";
             params.add(kv[0] + def);
         }
-        if (ep.requestBodyJson != null) params.add("data");
+        if (ep.isMultipart()) {
+            for (MultipartPart part : ep.multipartParts) params.add(part.name);
+        } else if (ep.requestBodyJson != null) {
+            params.add("data");
+        }
 
         String tsPath = springPathToTs(ep.path);
         String indent = "    ";
         StringBuilder sb = new StringBuilder();
         sb.append("  ").append(ep.methodName).append(": async (").append(String.join(", ", params)).append(") => {\n");
 
-        // URL building
+        // URL target
+        String target;
         if (ep.queryParams.isEmpty()) {
-            sb.append(indent).append("const res = await fetch(`${BASE_URL}").append(tsPath).append("`, {\n");
+            target = "`${BASE_URL}" + tsPath + "`";
         } else {
             sb.append(indent).append("const url = new URL(`${BASE_URL}").append(tsPath).append("`);\n");
             for (String qp : ep.queryParams) {
                 String name = qp.split("=")[0];
                 sb.append(indent).append("url.searchParams.set('").append(name).append("', String(").append(name).append("));\n");
             }
-            sb.append(indent).append("const res = await fetch(url.toString(), {\n");
+            target = "url.toString()";
         }
+
+        // Multipart body assembled before the request
+        if (ep.isMultipart()) {
+            sb.append(indent).append("const form = new FormData();\n");
+            for (MultipartPart part : ep.multipartParts) {
+                sb.append(indent).append("form.append('").append(part.name).append("', ").append(part.name).append(");\n");
+            }
+        }
+
+        sb.append(indent).append("const res = await fetch(").append(target).append(", {\n");
 
         // Fetch options
         sb.append(indent).append("  method: '").append(ep.httpMethod).append("',\n");
         sb.append(indent).append("  headers: {");
 
         List<String> headers = new ArrayList<>(ep.requestHeaders);
-        if (ep.requestBodyJson != null) headers.add(0, "'Content-Type': 'application/json'");
+        // Don't set Content-Type for multipart — the browser adds the boundary automatically.
+        if (!ep.isMultipart() && ep.requestBodyJson != null) headers.add(0, "'Content-Type': 'application/json'");
+        if ("bearer".equals(ep.authType)) headers.add(0, "'Authorization': `Bearer ${TOKEN}`");
+        else if ("basic".equals(ep.authType)) headers.add(0, "'Authorization': `Basic ${CREDENTIALS}`");
         headers.add("'Accept': 'application/json'");
 
         if (headers.size() == 1) {
@@ -75,7 +99,9 @@ public class JavaScriptFetchGenerator {
             sb.append(indent).append("  }");
         }
 
-        if (ep.requestBodyJson != null) {
+        if (ep.isMultipart()) {
+            sb.append(",\n").append(indent).append("  body: form\n");
+        } else if (ep.requestBodyJson != null) {
             sb.append(",\n").append(indent).append("  body: JSON.stringify(data)\n");
         } else {
             sb.append("\n");
