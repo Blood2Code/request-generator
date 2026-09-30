@@ -1,0 +1,82 @@
+<application>
+  <component name="ActionsLocalSummary">
+    <e n="$Delete">
+      <i c="2" l="1784813715972" />
+    </e>
+    <e n="$SelectAll">
+      <i c="7" l="1784811016146" />
+    </e>
+    <e n="$Undo">
+      <i c="1" l="1784810892000" />
+    </e>
+    <e n="CompareTwoFiles">
+      <i c="1" l="1784546332939" />
+    </e>
+    <e n="ConvertJavaToKotlin">
+      <i c="1" l="1784546160282" />
+    </e>
+    <e n="EditorBackSpace">
+      <i c="7" l="1784810891063" />
+    </e>
+    <e n="EditorCopy">
+      <i c="7" l="1784811016235" />
+    </e>
+    <e n="EditorDown">
+      <i c="1" l="1784810889073" />
+    </e>
+    <e n="EditorUp">
+      <i c="2" l="1784810889457" />
+    </e>
+    <e n="SettingsEntryPoint">
+      <i c="2" l="1784546254670" />
+    </e>
+    <e n="TextEditorWithPreview.Layout.EditorAndPreview">
+      <i c="3" l="1784810915706" />
+    </e>
+    <e n="TextEditorWithPreview.Layout.EditorOnly">
+      <i c="1" l="1784810914719" />
+    </e>
+    <e n="TextEditorWithPreview.Layout.PreviewOnly">
+      <i c="1" l="1784810913585" />
+    </e>
+    <e n="WelcomeScreen.OpenProject">
+      <i c="1" l="1784545992283" />
+    </e>
+    <e n="WelcomeScreen.Plugins">
+      <i c="2" l="1784546256472" />
+    </e>
+    <e n="com.intellij.openapi.fileEditor.impl.tabActions.CloseTab">
+      <i c="16" l="1784813776091" />
+    </e>
+    <e n="com.intellij.ui.components.BasicOptionButtonUI$ActionDelegate">
+      <i c="1" l="1784546227716" />
+    </e>
+    <e n="uz.umar.GenerateCurl">
+      <i c="1" l="1784810997431" />
+    </e>
+    <e n="uz.umar.GenerateEnv">
+      <i c="2" l="1784813720652" />
+    </e>
+    <e n="uz.umar.GenerateHttpFile">
+      <i c="2" l="1784813726433" />
+    </e>
+    <e n="uz.umar.GenerateJsFetch">
+      <i c="2" l="1784813766838" />
+    </e>
+    <e n="uz.umar.GenerateOpenApi">
+      <i c="2" l="1784813759058" />
+    </e>
+    <e n="uz.umar.GeneratePostman">
+      <i c="2" l="1784813743497" />
+    </e>
+    <e n="uz.umar.GeneratePython">
+      <i c="2" l="1784813749768" />
+    </e>
+    <e n="uz.umar.GenerateRestClient">
+      <i c="2" l="1784813755087" />
+    </e>
+    <e n="uz.umar.GenerateTypeScriptAxios">
+      <i c="2" l="1784813771965" />
+    </e>
+  </component>
+</application>

@@ -1,0 +1,23 @@
+<ivy-module version="2.0">
+  <info organisation="bundledModule" module="intellij.java.debugger" revision="IU-261.24374.151" />
+  <configurations>
+    <conf name="default" visibility="public" />
+  </configurations>
+  <publications>
+    <artifact name="intellij.java.debugger" ext="jar" conf="default" url="plugins/java/lib/modules" />
+  </publications>
+  <dependencies>
+    <dependency org="bundledModule" name="intellij.java.execution" rev="IU-261.24374.151" />
+    <dependency org="bundledModule" name="intellij.jsp" rev="IU-261.24374.151" />
+    <dependency org="bundledPlugin" name="com.intellij.java" rev="IU-261.24374.151" />
+    <dependency org="bundledModule" name="intellij.java.resources.en" rev="IU-261.24374.151" />
+    <dependency org="bundledModule" name="intellij.platform.analysis" rev="IU-261.24374.151" />
+    <dependency org="bundledModule" name="intellij.platform.core" rev="IU-261.24374.151" />
+    <dependency org="bundledModule" name="intellij.platform.ide" rev="IU-261.24374.151" />
+    <dependency org="bundledModule" name="intellij.platform.lang" rev="IU-261.24374.151" />
+    <dependency org="bundledModule" name="intellij.platform.debugger" rev="IU-261.24374.151" />
+    <dependency org="bundledModule" name="intellij.platform.core.ui" rev="IU-261.24374.151" />
+    <dependency org="bundledModule" name="intellij.xml.psi" rev="IU-261.24374.151" />
+    <dependency org="bundledModule" name="intellij.platform.backend" rev="IU-261.24374.151" />
+  </dependencies>
+</ivy-module>

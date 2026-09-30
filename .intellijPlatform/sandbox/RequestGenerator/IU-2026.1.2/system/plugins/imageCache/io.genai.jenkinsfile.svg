@@ -1,0 +1,5 @@
+<svg width="40" height="40" viewBox="0 0 40 40" xmlns="http://www.w3.org/2000/svg">
+  <rect x="3" y="3" width="34" height="34" rx="9" fill="none" stroke="#D33833" stroke-width="2.5"/>
+  <text x="20" y="27.5" font-family="'JetBrains Mono', Menlo, Consolas, monospace"
+        font-size="21" font-weight="700" fill="#D33833" text-anchor="middle">Jf</text>
+</svg>

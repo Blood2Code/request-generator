@@ -1,0 +1,12 @@
+<ivy-module version="2.0">
+  <info organisation="bundledModule" module="intellij.libraries.jackson.databind" revision="IU-261.24374.151" />
+  <configurations>
+    <conf name="default" visibility="public" />
+  </configurations>
+  <publications>
+    <artifact name="intellij.libraries.jackson.databind" ext="jar" conf="default" url="lib" />
+  </publications>
+  <dependencies>
+    <dependency org="bundledModule" name="intellij.libraries.jackson" rev="IU-261.24374.151" />
+  </dependencies>
+</ivy-module>

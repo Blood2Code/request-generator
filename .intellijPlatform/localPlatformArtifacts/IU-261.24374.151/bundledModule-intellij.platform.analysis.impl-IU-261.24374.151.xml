@@ -1,0 +1,26 @@
+<ivy-module version="2.0">
+  <info organisation="bundledModule" module="intellij.platform.analysis.impl" revision="IU-261.24374.151" />
+  <configurations>
+    <conf name="default" visibility="public" />
+  </configurations>
+  <publications>
+    <artifact name="intellij.platform.analysis.impl" ext="jar" conf="default" url="lib" />
+  </publications>
+  <dependencies>
+    <dependency org="bundledModule" name="intellij.libraries.fastutil" rev="IU-261.24374.151" />
+    <dependency org="bundledModule" name="intellij.libraries.gson" rev="IU-261.24374.151" />
+    <dependency org="bundledModule" name="intellij.libraries.jackson" rev="IU-261.24374.151" />
+    <dependency org="bundledModule" name="intellij.libraries.jackson.databind" rev="IU-261.24374.151" />
+    <dependency org="bundledModule" name="intellij.libraries.jackson.module.kotlin" rev="IU-261.24374.151" />
+    <dependency org="bundledModule" name="intellij.libraries.kotlinx.serialization.core" rev="IU-261.24374.151" />
+    <dependency org="bundledModule" name="intellij.libraries.kotlinx.serialization.json" rev="IU-261.24374.151" />
+    <dependency org="bundledModule" name="intellij.libraries.stream" rev="IU-261.24374.151" />
+    <dependency org="bundledModule" name="intellij.platform.analysis" rev="IU-261.24374.151" />
+    <dependency org="bundledModule" name="intellij.platform.core" rev="IU-261.24374.151" />
+    <dependency org="bundledModule" name="intellij.platform.core.impl" rev="IU-261.24374.151" />
+    <dependency org="bundledModule" name="intellij.platform.core.ui" rev="IU-261.24374.151" />
+    <dependency org="bundledModule" name="intellij.platform.projectModel" rev="IU-261.24374.151" />
+    <dependency org="bundledModule" name="intellij.platform.projectModel.impl" rev="IU-261.24374.151" />
+    <dependency org="bundledModule" name="intellij.platform.util.ui" rev="IU-261.24374.151" />
+  </dependencies>
+</ivy-module>

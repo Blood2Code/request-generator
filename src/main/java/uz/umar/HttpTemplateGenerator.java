@@ -49,8 +49,8 @@ public class HttpTemplateGenerator {
 
         String resp = JsonBodyBuilder.responseExample(ep.responsePsiType);
         if (resp != null) {
-            sb.append("\n\n# Example 200 response:\n");
-            sb.append(resp.lines().map(l -> "# " + l).collect(java.util.stream.Collectors.joining("\n")));
+            sb.append("\n\n### Example 200 response:\n");
+            sb.append(resp.lines().map(l -> "### " + l).collect(java.util.stream.Collectors.joining("\n")));
         }
 
         return sb.toString();

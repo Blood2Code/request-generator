@@ -1,0 +1,17 @@
+<ivy-module version="2.0">
+  <info organisation="bundledModule" module="intellij.java.aetherDependencyResolver" revision="IU-261.24374.151" />
+  <configurations>
+    <conf name="default" visibility="public" />
+  </configurations>
+  <publications>
+    <artifact name="intellij.java.aetherDependencyResolver" ext="jar" conf="default" url="lib" />
+  </publications>
+  <dependencies>
+    <dependency org="bundledModule" name="intellij.libraries.commons.codec" rev="IU-261.24374.151" />
+    <dependency org="bundledModule" name="intellij.libraries.commons.lang3" rev="IU-261.24374.151" />
+    <dependency org="bundledModule" name="intellij.libraries.commons.logging" rev="IU-261.24374.151" />
+    <dependency org="bundledModule" name="intellij.libraries.http.client" rev="IU-261.24374.151" />
+    <dependency org="bundledModule" name="intellij.libraries.maven.resolver.provider" rev="IU-261.24374.151" />
+    <dependency org="bundledModule" name="intellij.libraries.plexus.utils" rev="IU-261.24374.151" />
+  </dependencies>
+</ivy-module>
