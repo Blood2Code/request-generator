@@ -1,376 +1,0 @@
-tatusName>
-genderName.ResponseContainer@eduTypeName˛ˇˇˇ2yheaders˛ˇˇˇqÖtotalStudentsHtotallastName$DiplomaControllerApiRstat}paramstpinfl˛ˇˇˇ"wdiplomaGivenDate8current	firstName&institutionName4totalWorkingNdiplomaSerial:totalGraduatedStudentsJpageableid size|diplomaNumber<diplomaGivenYearzpage˛ˇˇˇT{DiplomaStatDtoEspecialityName6
-middleName(
-Pagination
-content˛ˇˇˇCfullName*J(ƒ¡Ÿ	öã<»¶·NnN+_\— @\L[IE:NºRƒ+∫
-ÔDiplomaControllerApiRaxiosÓexpRKqDiplomaResponseDtoPagedResponseContainerResponseContainer@DiplomaStatDtoEDiplomaControllerApiR
-Pagination
-ÈHTTP_REQUEST_CALLER˛ˇˇˇmÅÎ`^DiplomaStatDtoE^DiplomaResponseDto^PagedResponseContainer^ResponseContainer@^Pagination
-E°DiplomaResponseDtoˇˇˇ "$&(*,.02468:<>PagedResponseContainer˛ˇˇˇResponseContainerCDiplomaStatDto¸ˇˇˇHJLNDiplomaControllerApi˛ˇˇˇT}
-Pagination¸ˇˇˇÓ˘                              AS id,
-                         COALESCE(
-                                 s.full_name,
-                                 CONCAT(c.name, ' ', c.surname, ' ', c.patronym)
-                             , au.full_name
-                             , iss.full_name
-                             )       AS full_name,
-                         COALESCE(
-                                 s.pin,
-                                 c.pnfl,
-                                 au.pinfl,
-                                 iss.pnfl
-                             )       AS pnfl,
-                         CASE
-                             WHEN s.id IS NOT NULL THEN COALESCE(IF(s.gd IS NULL, NULL, IF(s.gd = 'Erkak', 1, 2)), IF(SUBSTRING(s.pin, 1, 1) IN ('1','3','5','7'), 1, IF(SUBSTRING(s.pin, 1, 1) IN ('2','4','6','8'), 2, NULL)))
-                             WHEN c.id IS NOT NULL THEN COALESCE(c.gender_code, IF(SUBSTRING(c.pnfl, 1, 1) IN ('1','3','5','7'), 1, IF(SUBSTRING(c.pnfl, 1, 1) IN ('2','4','6','8'), 2, NULL)))
-                             WHEN au.id IS NOT NULL THEN COALESCE(IF(au.gender IS NULL, NULL, IF(au.gender = 'male', 1, 2)), IF(SUBSTRING(au.pinfl, 1, 1) IN ('1','3','5','7'), 1, IF(SUBSTRING(au.pinfl, 1, 1) IN ('2','4','6','8'), 2, NULL)))
-                             WHEN iss.id IS NOT NULL THEN COALESCE(IF(iss.gender IS NULL, NULL, IF(iss.gender = 'male', 1, 2)), IF(SUBSTRING(iss.pnfl, 1, 1) IN ('1','3','5','7'), 1, IF(SUBSTRING(iss.pnfl, 1, 1) IN ('2','4','6','8'), 2, NULL)))
-                             ELSE NULL
-                             END                               AS gender,
-                         e.dep_name  AS dep_name,
-                         e.position  AS position,
-                         e.begin_date                          AS begin_date,
-                         a.address   AS address,
-                         e.exp_type  AS exp_type,
-                         CASE
-                             WHEN s.id IS NOT NULL THEN 'otm'
-                             WHEN c.id IS NOT NULL THEN 'uzbek_coders'
-                             WHEN au.id IS NOT NULL THEN 'ak_user'
-                             WHEN iss.id IS NOT NULL THEN 'it_study'
-                             END     AS source,
-                         fs.name                               AS speciality
-                  FROM experience e
-                           LEFT JOIN student s ON s.id = e.student_id
-                           LEFT JOIN uzbek_coders_user c ON c.id = e.coders_user_id
-                           LEFT JOIN alkharazmi_user au ON au.id = e.alkharazmi_user_id
-                           LEFT JOIN it_study_student iss ON iss.id = e.it_study_student_id
-                           LEFT JOIN address a ON s.id = a.student_id
-                           LEFT JOIN education e2 on s.id = e2.student_id
-                           LEFT JOIN faculty_speciality fs on e2.speciality_id = fs.id
-                  WHERE e.deleted = false
-                    AND (:keyword IS NULL OR (
-                              COALESCE(s.full_name, CONCAT(c.name, ' ', c.surname, ' ', c.patronym), au.full_name, iss.full_name)
-                              LIKE CONCAT('%', :keyword, '%')
-                          OR COALESCE(s.pin, c.pnfl, au.pinfl, iss.pnfl) LIKE CONCAT('%', :keyword, '%')
-                          OR e.dep_name LIKE CONCAT('%', :keyword, '%')
-                          OR e.position LIKE CONCAT('%', :keyword, '%')
-                          OR a.address LIKE CONCAT('%', :keyword, '%')
-                      ))
-                    AND (:gender IS NULL OR (
-                          CASE
-                              WHEN s.id IS NOT NULL THEN COALESCE(IF(s.gd IS NULL, NULL, IF(s.gd = 'Erkak', 1, 2)), IF(SUBSTRING(s.pin, 1, 1) IN ('1','3','5','7'), 1, IF(SUBSTRING(s.pin, 1, 1) IN ('2','4','6','8'), 2, NULL)))
-                              WHEN c.id IS NOT NULL THEN COALESCE(c.gender_code, IF(SUBSTRING(c.pnfl, 1, 1) IN ('1','3','5','7'), 1, IF(SUBSTRING(c.pnfl, 1, 1) IN ('2','4','6','8'), 2, NULL)))
-                              WHEN au.id IS NOT NULL THEN COALESCE(IF(au.gender IS NULL, NULL, IF(au.gender = 'male', 1, 2)), IF(SUBSTRING(au.pinfl, 1, 1) IN ('1','3','5','7'), 1, IF(SUBSTRING(au.pinfl, 1, 1) IN ('2','4','6','8'), 2, NULL)))
-                              WHEN iss.id IS NOT NULL THEN COALESCE(IF(iss.gender IS NULL, NULL, IF(iss.gender = 'male', 1, 2)), IF(SUBSTRING(iss.pnfl, 1, 1) IN ('1','3','5','7'), 1, IF(SUBSTRING(iss.pnfl, 1, 1) IN ('2','4','6','8'), 2, NULL)))
-                              ELSE NULL
-                              END = :gender
-                      ))
-                    AND (
-                        :age_from IS NULL OR
-                        TIMESTAMPDIFF(YEAR,
-                            STR_TO_DATE(CONCAT(
-                                CASE WHEN SUBSTRING(e.pin, 1, 1) IN ('1','2') THEN '18'
-                                     WHEN SUBSTRING(e.pin, 1, 1) IN ('3','4') THEN '19'
-                                     ELSE '20' END,
-                                SUBSTRING(e.pin, 6, 2), '-', SUBSTRING(e.pin, 4, 2), '-', SUBSTRING(e.pin, 2, 2)
-                            ), '%Y-%m-%d'), CURDATE()
-                        ) BETWEEN :age_from AND :age_to
-                    )
-                    AND (
-                          :source IS NULL OR
-                          (:source = 'otm' AND e.student_id IS NOT NULL) OR
-                          (:source = 'uzbek_coders' AND e.coders_user_id IS NOT NULL AND c.register_time <= FROM_UNIXTIME(1761955200000 / 1000)) OR
-                          (:source = 'ak_user' AND e.alkharazmi_user_id IS NOT NULL) OR
-                          (:source = 'it_study' AND EXISTS (
-                                SELECT 1 FROM experience ex
-                                WHERE ex.pin = e.pin
-                                  AND ex.it_study_student_id IS NOT NULL
-                                  AND ex.deleted = false
-                            ))
-                      )
-                    AND (:employed_date_from IS NULL OR e.begin_date BETWEEN :employed_date_from AND :employed_date_to)
-                    AND (:region IS NULL OR CASE
-                        WHEN a.region LIKE '%–¢–û–®–ö–ï–ù–¢ –®–ê“≤–†–ò%' OR a.region LIKE '%Toshkent shahri%' THEN 'Toshkent shahri'
-                        WHEN a.region LIKE '%–¢–û–®–ö–ï–ù–¢%' OR a.region LIKE '%Toshkent viloyati%' THEN 'Toshkent viloyati'
-                        WHEN a.region LIKE '%–ê–ù–î–ò–ñ–û–ù%' OR a.region LIKE '%Andijon%' THEN 'Andijon'
-                        WHEN a.region LIKE '%–ë–£–•–û–†–û%' OR a.region LIKE '%Buxoro%' THEN 'Buxoro'
-                        WHEN a.region LIKE '%–§–ê–†“í–û–ù–ê%' OR a.region LIKE '%Farg%' THEN 'Farg''ona'
-                        WHEN a.region LIKE '%–ñ–ò–ó–ó–ê–•%' OR a.region LIKE '%Jizzax%' THEN 'Jizzax'
-                        WHEN a.region LIKE '%–ù–ê–ú–ê–ù–ì–ê–ù%' OR a.region LIKE '%Namangan%' THEN 'Namangan'
-                        WHEN a.region LIKE '%–ù–ê–í–û–ò–ô%' OR a.region LIKE '%Navoiy%' THEN 'Navoiy'
-                        WHEN a.region LIKE '%“ö–ê–®“ö–ê–î–ê–†–Å%' OR a.region LIKE '%Qashqadaryo%' THEN 'Qashqadaryo'
-                        WHEN a.region LIKE '%“ö–û–†–ê“ö–ê–õ–ü–û“í%' OR a.region LIKE '%Qoraqalpog%' THEN 'Qoraqalpog''iston'
-                        WHEN a.region LIKE '%–°–ê–ú–ê–†“ö–ê–ù–î%' OR a.region LIKE '%Samarqand%' THEN 'Samarqand'
-                        WHEN a.region LIKE '%–°–ò–†–î–ê–†–Å%' OR a.region LIKE '%Sirdaryo%' THEN 'Sirdaryo'
-                        WHEN a.region LIKE '%–°–£–†–•–û–ù–î–ê–†–Å%' OR a.region LIKE '%Surxondaryo%' THEN 'Surxondaryo'
-                        WHEN a.region LIKE '%–•–û–†–ê–ó–ú%' OR a.region LIKE '%Xorazm%' THEN 'Xorazm'
-                        ELSE a.region
-                    END = :region)
-                    AND (:exp_type IS NULL OR :exp_type = e.exp_type)
-                    AND (:speciality IS NULL OR fs.name LIKE CONCAT('%', :speciality, '%'))
-                  UNION ALL
-                  SELECT se.id                                      AS id,
-                         CONCAT(se.firstName, ' ', se.lastName, ' ', se.middleName) ,
-                         se.pinfl ,
-                         se.gender_code,
-                         NULL,
-                         se.activityName ,
-                         se.registrationDate,
-                         se.villageName ,
-                         'self_employed' ,
-                         'self_employed'  AS source,
-                         NULL                                       AS speciality
-                  FROM self_employeds se
-                           LEFT JOIN address a  ON se.source_type = 'student'  AND se.source_id = a.student_id
-                           LEFT JOIN address a1 ON se.source_type = 'coder'    AND se.source_id = a1.coders_user_id
-                           LEFT JOIN address a2 ON se.source_type = 'ak_user'  AND se.source_id = a2.alkharazmi_user_id
-                           LEFT JOIN address a3 ON se.source_type = 'it_study' AND se.source_id = a3.it_city_user_id
-                  WHERE 1 = 1
-                    AND (:keyword IS NULL OR (
-                              CONCAT(se.firstName, ' ', se.lastName, ' ', se.middleName)
-                              LIKE CONCAT('%', :keyword, '%')
-                          OR se.activityName LIKE CONCAT('%', :keyword, '%')
-                          OR se.pinfl LIKE CONCAT('%', :keyword, '%')
-                          OR se.villageName LIKE CONCAT('%', :keyword, '%')
-                      ))
-                    AND (:gender IS NULL OR COALESCE(se.gender_code, IF(SUBSTRING(se.pinfl, 1, 1) IN ('1','3','5','7'), 1, IF(SUBSTRING(se.pinfl, 1, 1) IN ('2','4','6','8'), 2, NULL))) = :gender)
-                    AND (:age_from IS NULL OR
-                        TIMESTAMPDIFF(YEAR,
-                            STR_TO_DATE(CONCAT(
-                                CASE WHEN SUBSTRING(se.pinfl, 1, 1) IN ('1','2') THEN '18'
-                                     WHEN SUBSTRING(se.pinfl, 1, 1) IN ('3','4') THEN '19'
-                                     ELSE '20' END,
-                                SUBSTRING(se.pinfl, 6, 2), '-', SUBSTRING(se.pinfl, 4, 2), '-', SUBSTRING(se.pinfl, 2, 2)
-                            ), '%Y-%m-%d'), CURDATE()
-                        ) BETWEEN :age_from AND :age_to)
-                    AND (:region IS NULL OR CASE
-                        WHEN COALESCE(a.region,a1.region,a2.region,a3.region) LIKE '%–¢–û–®–ö–ï–ù–¢ –®–ê“≤–†–ò%' OR COALESCE(a.region,a1.region,a2.region,a3.region) LIKE '%Toshkent shahri%' THEN 'Toshkent shahri'
-                        WHEN COALESCE(a.region,a1.region,a2.region,a3.region) LIKE '%–¢–û–®–ö–ï–ù–¢%' OR COALESCE(a.region,a1.region,a2.region,a3.region) LIKE '%Toshkent viloyati%' THEN 'Toshkent viloyati'
-                        WHEN COALESCE(a.region,a1.region,a2.region,a3.region) LIKE '%–ê–ù–î–ò–ñ–û–ù%' OR COALESCE(a.region,a1.region,a2.region,a3.region) LIKE '%Andijon%' THEN 'Andijon'
-                        WHEN COALESCE(a.region,a1.region,a2.region,a3.region) LIKE '%–ë–£–•–û–†–û%' OR COALESCE(a.region,a1.region,a2.region,a3.region) LIKE '%Buxoro%' THEN 'Buxoro'
-                        WHEN COALESCE(a.region,a1.region,a2.region,a3.region) LIKE '%–§–ê–†“í–û–ù–ê%' OR COALESCE(a.region,a1.region,a2.region,a3.region) LIKE '%Farg%' THEN 'Farg''ona'
-                        WHEN COALESCE(a.region,a1.region,a2.region,a3.region) LIKE '%–ñ–ò–ó–ó–ê–•%' OR COALESCE(a.region,a1.region,a2.region,a3.region) LIKE '%Jizzax%' THEN 'Jizzax'
-                        WHEN COALESCE(a.region,a1.region,a2.region,a3.region) LIKE '%–ù–ê–ú–ê–ù–ì–ê–ù%' OR COALESCE(a.region,a1.region,a2.region,a3.region) LIKE '%Namangan%' THEN 'Namangan'
-                        WHEN COALESCE(a.region,a1.region,a2.region,a3.region) LIKE '%–ù–ê–í–û–ò–ô%' OR COALESCE(a.region,a1.region,a2.region,a3.region) LIKE '%Navoiy%' THEN 'Navoiy'
-                        WHEN COALESCE(a.region,a1.region,a2.region,a3.region) LIKE '%“ö–ê–®“ö–ê–î–ê–†–Å%' OR COALESCE(a.region,a1.region,a2.region,a3.region) LIKE '%Qashqadaryo%' THEN 'Qashqadaryo'
-                        WHEN COALESCE(a.region,a1.region,a2.region,a3.region) LIKE '%“ö–û–†–ê“ö–ê–õ–ü–û“í%' OR COALESCE(a.region,a1.region,a2.region,a3.region) LIKE '%Qoraqalpog%' THEN 'Qoraqalpog''iston'
-                        WHEN COALESCE(a.region,a1.region,a2.region,a3.region) LIKE '%–°–ê–ú–ê–†“ö–ê–ù–î%' OR COALESCE(a.region,a1.region,a2.region,a3.region) LIKE '%Samarqand%' THEN 'Samarqand'
-                        WHEN COALESCE(a.region,a1.region,a2.region,a3.region) LIKE '%–°–ò–†–î–ê–†–Å%' OR COALESCE(a.region,a1.region,a2.region,a3.region) LIKE '%Sirdaryo%' THEN 'Sirdaryo'
-                        WHEN COALESCE(a.region,a1.region,a2.region,a3.region) LIKE '%–°–£–†–•–û–ù–î–ê–†–Å%' OR COALESCE(a.region,a1.region,a2.region,a3.region) LIKE '%Surxondaryo%' THEN 'Surxondaryo'
-                        WHEN COALESCE(a.region,a1.region,a2.region,a3.region) LIKE '%–•–û–†–ê–ó–ú%' OR COALESCE(a.region,a1.region,a2.region,a3.region) LIKE '%Xorazm%' THEN 'Xorazm'
-                        ELSE COALESCE(a.region,a1.region,a2.region,a3.region)
-                    END = :region)
-                   AND (
-                        :source IS NULL
-                            OR :source = 'self_employed'
-                            OR (:source = 'it_study' AND EXISTS (
-                            SELECT 1 FROM it_study_student iss2 WHERE iss2.pnfl = se.pinfl
-                        ))
-                    )
-                    AND (:employed_date_from IS NULL OR se.registrationDate BETWEEN :employed_date_from AND :employed_date_to)
-                    AND (:exp_type IS NULL OR :exp_type = 'self_employed')) t
-            """Ã±StudentRepo¨_findAllPins$getExperience˛ˇˇˇAåfindFirstByPinfindIdsWithoutPhoto8findAllByPinIngetAll-©JpaRepositoryÆPageAOptionalList˚ˇˇˇ$-8å∞?	LocalDate˛ˇˇˇAåInteger˛ˇˇˇAåPageableAString˝ˇˇˇAåList≠_findAllPins$getExperience˛ˇˇˇAåfindFirstByPinfindIdsWithoutPhoto8findAllByPinIngetAll-®>ParamÏˇˇˇOU[agmsyÖòû§™∞∂º¬»ŒQuery˚ˇˇˇ&/:Cé
-Repository≤ﬂ˜ﬂ∑˝AŸÒ‚ËMÚ‹MÃ<=Ã‹ …√/Õ=-"-BASE_URLtopltuTOKENDiplomaControllerApitoplfupagetsDiplomaControllerApifkeywordurlresmethod*JheadersAuthorizationAccept !  (   
-        %*, / 2 5 	8> 
-  C E*, / 2 5 I  ÷†÷†¬Ä ÷§ 	÷†
-÷†  –‡   ¿Ä  ÷‡‡KkeywordDiplomaControllerApi	ÈHTTP_REQUEST_CALLER˛ˇˇˇ!MÜTOKENpageBASE_URLmethod˛ˇˇˇ#keywordAuthorization˛ˇˇˇ&Accept˛ˇˇˇ'headers˛ˇˇˇ$urlres˛ˇˇˇ DiplomaControllerApi	ÔDiplomaControllerApi	NUƒ¡Ÿ»¶·ø≈–·˛ˇˇˇ#tí"ÅœuÈ›	Y˛ˇˇˇ&tå°(˛ˇˇˇ'/goÜ˛ˇˇˇ$ ≈o ∏†˛ˇˇˇ :Nº	LFpagemethod˛ˇˇˇ#Authorization˛ˇˇˇ&Accept˛ˇˇˇ'headers˛ˇˇˇ$Óexp	EDiplomaControllerApi‘˘Ê.ˆ˜ñ¬2ﬂ1‹.ËMÚ–I¯FÈ<¸=˜>˛Ã<=ÙD⁄H¬H…ÁI8axios'axios'-"-BASE_URLtopltuTOKEN
-PaginationtoplfutotaltpPaginationfnumberprevnextcurrentPagedResponseContainercontenttpPagedResponseContainerfunknownpageableDiplomaResponseDtoidtpDiplomaResponseDtofpinflstringlastName	firstName
-middleNamefullNamegender
-genderName	birthDateeduTypeNameinstitutionNamespecialityNamediplomaGivenDatediplomaSerialdiplomaNumber
-statusNameResponseContainertpResponseContainerfDiplomaStatDtototalStudentstpDiplomaStatDtoftotalGraduatedStudentstotalFacultytotalWorkingDiplomaControllerApipagetsDiplomaControllerApifkeywordheaders*TAuthorizationparamsdiplomaGivenYearsize ! axiosu   
-     	
- 	
- 	
- 	!
- $  	' 
-* 	+
-. /  	2
- 	5
-8 	9
-8 	<
-8 	?
-8 	B
-8 	E
-8 	H
-8 	K
-8 	N
-8 	Q
-8 	T
-8 	W
-8 	Z
-8 	]
-8 	`
-8 c  	f
-* i  	l
- 	o
- 	r
- 	u
- x } ÇÖ  â 
-8  
-é èê ì ñ ô û £ ® ≠ ≤ ∑ º   è 
-¬ èê ì ¬     ÷†÷†ñ	
-
-
-
-ññ !"#$%&ñ'(ñ)*+,+-+.+¬Ä ÷§/01‘`01‘Ä2 345464∆Ä24∆Ä4∆Ä4∆Ä 4∆Ä74∆Ä04∆Ä84–‡p  'ËKqDiplomaResponseDtoPagedResponseContainerResponseContainer@DiplomaStatDtoEDiplomaControllerApiR
-Pagination
-ÈHTTP_REQUEST_CALLER˛ˇˇˇ[nM‰TOKEN	BASE_URLDiplomaResponseDtonextgender˛ˇˇˇ,fkeyworddPagedResponseContainer	birthDate0Authorization˛ˇˇˇatprevtotalFacultyL
-statusName>
-genderName.ResponseContainer@eduTypeName˛ˇˇˇ2gheaders˛ˇˇˇ_rtotalStudentsHtotallastName$DiplomaControllerApiRparamsbpinfl˛ˇˇˇ"ediplomaGivenDate8current	firstName&institutionName4totalWorkingNdiplomaSerial:totalGraduatedStudentsJpageableid sizejdiplomaNumber<diplomaGivenYearhpage˛ˇˇˇTiDiplomaStatDtoEspecialityName6
-middleName(
-Pagination
-content˛ˇˇˇCfullName*axiosÎ`^DiplomaStatDtoE^DiplomaResponseDto^PagedResponseContainer^ResponseContainer@^Pagination
-ÔDiplomaControllerApiRNÚƒ¡Ÿ	»¶·öã< ÈÙßµÖÚ¡fœuÈdqï NnN+“§˚8›	Y˛ˇˇˇat ÎÁπWRƒ:å‚#H˛îê≥$’d€0…π&ªg_\— @±Æ0</goÜ˛ˇˇˇ_r	≠ﬁ.Ì?i±4Ò⁄r6§Ï7∂ø«È":NºR§Á|,*ƒ™˘Üb[≠etí"ÅT˘™LdﬂÌ)&Ω|o	2M´|Ã.1≥,í≠®$¬áEÊk≤( 5‡jï¶°“NÇâÓhƒæNíJ 4bèi\L[IEç∂ı´CPpÎè>ƒ+∫
-L‚fullName*page˛ˇˇˇTinextgender˛ˇˇˇ,fkeywordd	birthDate0Authorization˛ˇˇˇatprevtotalFacultyL
-statusName>
-genderName.eduTypeName˛ˇˇˇ2gheaders˛ˇˇˇ_rtotalStudentsHtotallastName$paramsbpinfl˛ˇˇˇ"ediplomaGivenDate8current	firstName&institutionName4totalWorkingNdiplomaSerial:totalGraduatedStudentsJpageableid diplomaNumber<diplomaGivenYearhspecialityName6
-middleName(sizejcontent˛ˇˇˇCÓexpRJ(ƒ¡Ÿ	öã<»¶·NnN+_\— @\L[IE:NºRƒ+∫
-EõDiplomaResponseDtoˇˇˇ "$&(*,.02468:<>PagedResponseContainer˛ˇˇˇResponseContainerCDiplomaStatDto¸ˇˇˇHJLNDiplomaControllerApiT
-Pagination¸ˇˇˇ’˘    THEN 'Samarqand'
-                                WHEN iss.region LIKE '%irdaryo%'          THEN 'Sirdaryo'
-                                WHEN iss.region LIKE '%urxondaryo%'       THEN 'Surxondaryo'
-                                WHEN iss.region LIKE '%oshkent sh%'       THEN 'Toshkent shahri'
-                                WHEN iss.region LIKE '%oshkent%'          THEN 'Toshkent viloyati'
-                                WHEN iss.region LIKE '%orazm%'            THEN 'Xorazm'
-                                ELSE COALESCE(iss.region, 'Noma''lum')
-                                END AS region_name
-                     FROM self_employeds se
-                              JOIN it_study_student iss
-                                   ON iss.id = se.source_id AND se.source_type = 'it_study'
-                 ) normalized
-            GROUP BY region_name
-            ORDER BY total_students DESC
-            """ˇ¸"""
-            SELECT region_name,
-                   COUNT(DISTINCT id) AS total_students,
-                   0                  AS total_studying,
-                   0                  AS total_graduated
-            FROM (
-                     SELECT se.id,
-                            CASE
-                                WHEN p.region LIKE '%–ê–ù–î–ò–ñ–û–ù%'       THEN 'Andijon'
-                                WHEN p.region LIKE '%–ë–£–•–û–†–û%'        THEN 'Buxoro'
-                                WHEN p.region LIKE '%–§–ê–†“í–û–ù–ê%'       THEN 'Farg''ona'
-                                WHEN p.region LIKE '%–ñ–ò–ó–ó–ê–•%'        THEN 'Jizzax'
-                                WHEN p.region LIKE '%–ù–ê–ú–ê–ù–ì–ê–ù%'      THEN 'Namangan'
-                                WHEN p.region LIKE '%–ù–ê–í–û–ò–ô%'        THEN 'Navoiy'
-                                WHEN p.region LIKE '%“ö–ê–®“ö–ê–î–ê–†–Å%'     THEN 'Qashqadaryo'
-                                WHEN p.region LIKE '%“ö–û–†–ê“ö–ê–õ–ü–û“í%'    THEN 'Qoraqalpog''iston'
-                                WHEN p.region LIKE '%–°–ê–ú–ê–†“ö–ê–ù–î%'     THEN 'Samarqand'
-                                WHEN p.region LIKE '%–°–ò–†–î–ê–†–Å%'       THEN 'Sirdaryo'
-                                WHEN p.region LIKE '%–°–£–†–•–û–ù–î–ê–†–Å%'    THEN 'Surxondaryo'
-                                WHEN p.region LIKE '%–¢–û–®–ö–ï–ù–¢ –®–ê“≤–†–ò%' THEN 'Toshkent shahri'
-                                WHEN p.region LIKE '%–¢–û–®–ö–ï–ù–¢%'       THEN 'Toshkent viloyati'
-                                WHEN p.region LIKE '%–•–û–†–ê–ó–ú%'        THEN 'Xorazm'
-                                ELSE COALESCE(p.region, 'Noma''lum')
-                                END AS region_name
-                     FROM self_employeds se
-                              LEFT JOIN (
-                         SELECT s.id, 'student' AS type, a.region
-                         FROM student s LEFT JOIN address a ON a.student_id = s.id
-                         UNION ALL
-                         SELECT c.id, 'coder', a.region
-                         FROM uzbek_coders_user c LEFT JOIN address a ON a.coders_user_id = c.id
-                         UNION ALL
-                         SELECT u.id, 'ak_user', a.region
-                         FROM alkharazmi_user u LEFT JOIN address a ON a.alkharazmi_user_id = u.id
-                     ) p ON p.id = se.source_id AND p.type = se.source_type
-                     WHERE se.source_type IN ('student', 'coder', 'ak_user')
-            
-                     UNION ALL
-            
-                     SELECT se.id,
-                            CASE
-                                WHEN iss.region LIKE '%Andijon%'          THEN 'Andijon'
-                                WHEN iss.region LIKE '%Buxoro%'           THEN 'Buxoro'
-                                WHEN iss.region LIKE '%arg%ona%'          THEN 'Farg''ona'
-                                WHEN iss.region LIKE '%izzax%'            THEN 'Jizzax'
-                                WHEN iss.region LIKE '%amangan%'          THEN 'Namangan'
-                                WHEN iss.region LIKE '%avoiy%'            THEN 'Navoiy'
-                                WHEN iss.region LIKE '%ashqadaryo%'       THEN 'Qashqadaryo'
-                                WHEN iss.region LIKE '%oraqalp%'          THEN 'Qoraqalpog''iston'
-                                WHEN iss.region LIKE '%amarqand%'         THEN 'Samarqand'
-                                WHEN iss.region LIKE '%irdaryo%'          THEN 'Sirdaryo'
-                                WHEN iss.region LIKE '%urxondaryo%'       THEN 'Surxondaryo'
-                                WHEN iss.region LIKE '%oshkent sh%'       THEN 'Toshkent shahri'
-                                WHEN iss.region LIKE '%oshkent%'          THEN 'Toshkent viloyati'
-                                WHEN iss.region LIKE '%orazm%'            THEN 'Xorazm'
-                                ELSE COALESCE(iss.region, 'Noma''lum')
-                                END AS region_name
-                     FROM self_employeds se
-                              JOIN it_study_student iss
-                                   ON iss.id = se.source_id AND se.source_type = 'it_study'
-                 ) normalized
-            GROUP BY region_name
-            ORDER BY total_students DESC
-            """!" ˇ˚@Query(value = """
-            SELECT t.course AS position,
-               COUNT(*) AS count
-        FROM (SELECT COALESCE(NULLIF(dm.course, ''), 'Noma''lum') AS course,
-                     COALESCE(dm.pnfl, CONCAT('id_', dm.id))      AS person_key
-              FROM dashboard_mv dm
-                       LEFT JOIN self_employeds se ON se.pinfl = dm.pnfl AND se.deleted IS FALSE
-                       LEFT JOIN experience exp ON exp.pin = dm.pnfl AND exp.deleted IS FALSE
-              WHERE dm.education_status_name = 'completed'
-                  AND (dm.work_place IS NOT NULL)
-                  AND se.id IS NOT NULL
-                  AND course not like '%kurs%'
-                  AND course not like '%Matematika%'
-                  AND course not like '%Noma''lum%'
-              GROUP BY COALESCE(NULLIF(dm.course, ''), 'Noma''lum'),
-                       COALESCE(dm.pnfl, CONCAT('id_', dm.id))) t
-        GROUP BY t.course
-        ORDER BY count DESC
-        LIMIT 10
-            """, nativeQuery = true)ˇ◊"""
-            SELECT t.course AS position,
-               COUNT(*) AS count
-        FROM (SELECT COALESCE(NULLIF(dm.course, ''), 'Noma''lum') AS course,
-                     COALESCE(dm.pnfl, CONCAT('id_', dm.id))      AS person_key
-              FROM dashboard_mv dm
-                       LEFT JOIN self_employeds se ON se.pinfl = dm.pnfl AND se.deleted IS FALSE
-                       LEFT JOIN experience exp ON exp.pin = dm.pnfl AND exp.deleted IS FALSE
-              WHERE dm.education_status_name = 'completed'
-                  AND (dm.work_place IS NOT NULL)
-                  AND se.id IS NOT NULL
-                  AND course not like '%kurs%'
-                  AND course not like '%Matematika%'
-                  AND course not like '%Noma''lum%'
-              GROUP BY COALESCE(NULLIF(dm.course, ''), 'Noma''lum'),
-                       COALESCE(dm.pnfl, CONCAT('id_', dm.id))) t
-        GROUP BY t.course
-        ORDER BY count DESC
-        LIMIT 10
-            """ˇ◊"""
-            SELECT t.course AS position,
-               COUNT(*) AS count
-        FROM (SELECT COALESCE(NULLIF(dm.course, ''), 'Noma''lum') AS course,
-                     COALESCE(dm.pnfl, CONCAT('id_', dm.id))      AS person_key
-              FROM dashboard_mv dm
-                       LEFT JOIN self_employeds se ON se.pinfl = dm.pnfl AND se.deleted IS FALSE
-                       LEFT JOIN experience exp ON exp.pin = dm.pnfl AND exp.deleted IS FALSE
-              WHERE dm.education_status_name = 'completed'
-                  AND (dm.work_place IS NOT NULL)
-                  AND se.id IS NOT NULL
-                  AND course not like '%kurs%'
-                  AND course not like '%Matematika%'
-                  AND course not like '%Noma''lum%'
-              GROUP BY COALESCE(NULLIF(dm.course, ''), 'Noma''lum'),
-                       COALESCE(dm.pnfl, CONCAT('id_', dm.id))) t
-        GROUP BY t.course
-        ORDER BY count DESC
-        LIMIT 10
-            """# $% ‰±SelfEmployedRepo≠_	totalStat/statByGroupfindAllByPinfl[findByIdCustomtop10ByPositionPbyRegionE
-byActivity:®Param*Query˙ˇˇˇ 1<GRÆFExperienceStatByGroupOptionalSelfEmpStatProjection/List¸ˇˇˇ:EP[≤}ò©JpaRepository¨_	totalStat/statByGroupfindAllByPinfl[findByIdCustomtop10ByPositionPbyRegionE
-byActivity:∞IntegerString[˛A (:source = 'it_study' AND EXISTS (
-                            SELECT 1 FROM it_study_student iss2 WHERE iss2.pnfl = se.pinfl
-                        ))
-                    )
-                    AND (:employed_date_from IS NULL OR se.registrationDate BETWEEN :employed_date_from AND :employed_date_to)
-                    AND (:exp_type IS NULL OR :exp_type = 'self_employed')) t
-            """Ã±StudentRepo≠_findAllPins$getExperience˛ˇˇˇAåfindFirstByPinfindIdsWithoutPhoto8findAllByPinIngetAll-®>ParamÏˇˇˇOU[agmsyÖòû§™∞∂º¬»ŒQuery˚ˇˇˇ&/:Cé
-RepositoryÆPageAOptionalList˚ˇˇˇ$-8å≤ﬂ˜ﬂ∑©JpaRepository¨_findAllPins$getExperience˛ˇˇˇAåfindFirstByPinfindIdsWithoutPhoto8findAllByPinIngetAll-∞?	LocalDate˛ˇˇˇAåInteger˛ˇˇˇAåPageableAString˝ˇˇˇAåList˝A-ctdbooleanﬂcos-st-restricts±cvc-datatype-valid.1.1b"ct-props-correct.2ºminInclusive-valid-restrictionÁ%cvc-complex-type.prohibited-attributeÓ	hexBinaryÂderivation-ok-restriction.5.2.2»cvc-elt$cvc-complex-type.4cvc-minExclusive-validFsrc-simple-typeÅrcase-NSSubsetƒ#minInclusive-less-than-maxExclusiveÂcos-st-derived-ok∞src-attribute_groupbcvc-complex-type.2.1e-props-correct.2Œsrc-resolve~e-props-correct.4œcvc-complex-type.2.2cos-seq-rangeØderivation-ok-restriction.5.2«base64Binaryﬁcvc-enumeration-valid.b4cos-ct-extends.1.4.2.2£cos-equiv-class•cos-element-consistent§no-xmlnsÎcvc-complex-type.2.4csrc-redefinexanyURI›cvc-facet-valid5cvc-particleMst-restrict-facetsŸcvc-elt.4.1*cos-st-restricts.1.1≤cos-aw-intersectúcos-particle-extend¨integerÁcvc-complex-type.2.4bsrc-simple-type.3aÑrcase-RecurseLax.2Ãst-props-correct’derivation-ok-restriction.5.1.2≈cvc-assess-attr.1.2notation-targetns-attr—decimal·,minInclusive-less-than-equal-to-maxInclusive‰derivation-ok-restriction.5.1ƒ,minExclusive-less-than-equal-to-maxExclusive·src-elementgcvc-assess-elt.1.1.1.3.2cvc-assess-attrcvc-complex-type.3.2.1cvc-complex-type.3.2.2cvc-pattern-validPcos-ct-extends†src-ct.2fpattern-regexÒcvc-typeTsrc-model_group_defnsp-props-correct.2.2Òc-props-correctìcvc-fractionDigits-valid6src-redefine.5aysrc-annotationYcos-equiv-derived-ok-rec¶ag-props-correct.2écvc-minLength-valid.1.2Jcvc-elt.4.3d/src-notationvcvc-attribute.4	src-qnamewlistËduration„st-props-correct.4.2.1◊notation-targetns-elem“!derivation-ok-restriction.5.2.2.1∆rcase-NSCompat¡cos-choice-rangeûcos-st-restricts.2.1b¥src-attributeZcos-nonambig™st-props-correct.3÷rcase-Recurse.2.2…derivation-ok-restriction.2.2¡src-attribute.2]cvc-wildcardVsrc-resolve.acvc-enumeration-valid3cos-particle-restrict.2Æinvalid-xpathˆcos-aw-unionùrcase-Recurse.2«Œ¶wC”TÌTinfo.moduleinfo.releaseinfo.timestamp     .ß+info.timestampinfo.moduleinfo.release¬ª]6”TÌTversiongroupId
-artifactId     !ßversiongroupId
-artifactId∆«]6”TÌTversiongroupId
-artifactId     !ßversiongroupId
-artifactId¯¢

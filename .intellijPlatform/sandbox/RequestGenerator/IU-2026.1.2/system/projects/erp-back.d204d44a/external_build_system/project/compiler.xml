@@ -1,7 +1,0 @@
-<project>
-  <component name="ExternalCompilerConfiguration">
-    <bytecodeTargetLevel>
-      <module name="erp-backend" target="17" />
-    </bytecodeTargetLevel>
-  </component>
-</project>
